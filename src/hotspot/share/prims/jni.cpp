@@ -94,8 +94,8 @@
 #endif
 
 // SunnyMilkFuzzer Coverage APIs and Initializations.
-int SunnyMilkFuzzerCoverageCounter = 0;
-int SunnyMilkFuzzerCoverageTable[10000] = {1,2,3,4,5};
+size_t SunnyMilkFuzzerCoverageCounter = 0;
+int SunnyMilkFuzzerCoverageTable[1 << 14];
 int* GetSunnyMilkFuzzerCoverage() {
   return SunnyMilkFuzzerCoverageTable;
 }

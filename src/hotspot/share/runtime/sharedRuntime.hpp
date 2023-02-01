@@ -39,8 +39,8 @@ class AdapterFingerPrint;
 class vframeStream;
 
 // SunnyMilkFuzzer Coverage Information
-extern int SunnyMilkFuzzerCoverageTable[10000];
-extern int SunnyMilkFuzzerCoverageCounter;
+extern int SunnyMilkFuzzerCoverageTable[1 << 14];
+extern size_t SunnyMilkFuzzerCoverageCounter;
 
 
 // Runtime is the base class for various runtime interfaces

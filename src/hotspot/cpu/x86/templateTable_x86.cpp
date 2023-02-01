@@ -613,8 +613,11 @@ void TemplateTable::locals_index(Register reg, int offset) {
 #pragma GCC optimize ("O0")
 
 static void SunnyMilkFuzzerPrint() {
+  constexpr size_t SunnyMilkFuzzerCoverageTable_SizeMask = 1 << 14 - 1;
   for (int smf_i = 0; smf_i < 10; ++smf_i) {
-    SunnyMilkFuzzerCoverageTable[smf_i] = smf_i;
+    SunnyMilkFuzzerCoverageCounter = 
+      (SunnyMilkFuzzerCoverageCounter + 1) & SunnyMilkFuzzerCoverageTable_SizeMask;
+    SunnyMilkFuzzerCoverageTable[SunnyMilkFuzzerCoverageCounter] = smf_i;
   }
 }
 
