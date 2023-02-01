@@ -93,6 +93,13 @@
 #include "jvmci/jvmciCompiler.hpp"
 #endif
 
+// SunnyMilkFuzzer Coverage APIs and Initializations.
+int SunnyMilkFuzzerCoverageCounter = 0;
+int SunnyMilkFuzzerCoverageTable[10000] = {1,2,3,4,5};
+int* GetSunnyMilkFuzzerCoverage() {
+  return SunnyMilkFuzzerCoverageTable;
+}
+
 static jint CurrentVersion = JNI_VERSION_10;
 
 #if defined(_WIN32) && !defined(USE_VECTORED_EXCEPTION_HANDLING)
@@ -3573,7 +3580,11 @@ struct JNINativeInterface_ jni_NativeInterface = {
 
     // Module features
 
-    jni_GetModule
+    jni_GetModule,
+
+    // SunnyMilkFuzzer features
+
+    GetSunnyMilkFuzzerCoverage
 };
 
 

@@ -609,6 +609,17 @@ void TemplateTable::locals_index(Register reg, int offset) {
   __ negptr(reg);
 }
 
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+
+static void SunnyMilkFuzzerPrint() {
+  for (int smf_i = 0; smf_i < 10; ++smf_i) {
+    SunnyMilkFuzzerCoverageTable[smf_i] = smf_i;
+  }
+}
+
+#pragma GCC pop_options
+
 void TemplateTable::iload() {
   iload_internal();
 }
@@ -2137,6 +2148,7 @@ void TemplateTable::float_cmp(bool is_float, int unordered_result) {
 }
 
 void TemplateTable::branch(bool is_jsr, bool is_wide) {
+  __ call(RuntimeAddress(CAST_FROM_FN_PTR(address, SunnyMilkFuzzerPrint)));
   __ get_method(rcx); // rcx holds method
   __ profile_taken_branch(rax, rbx); // rax holds updated MDP, rbx
                                      // holds bumped taken count

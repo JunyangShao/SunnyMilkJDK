@@ -770,6 +770,9 @@ struct JNINativeInterface_ {
 
     jobject (JNICALL *GetModule)
        (JNIEnv* env, jclass clazz);
+
+    /* SunnyMilkFuzzer Features */
+    int* (* GetSunnyMilkFuzzerCoverage)();
 };
 
 /*
@@ -1866,6 +1869,11 @@ struct JNIEnv_ {
 
     jobject GetModule(jclass clazz) {
         return functions->GetModule(this, clazz);
+    }
+
+    /* SunnyMilkFuzzer Features */
+    int* GetSunnyMilkFuzzerCoverage() {
+      return functions->GetSunnyMilkFuzzerCoverage();
     }
 
 #endif /* __cplusplus */
