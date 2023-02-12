@@ -97,7 +97,7 @@ JLI_HasSuffix(const char *s1, const char *s2)
 /*
  * debug helpers we use
  */
-static jboolean _launcher_debug = JNI_FALSE;
+static jboolean _launcher_debug = JNI_TRUE;
 
 void
 JLI_TraceLauncher(const char* fmt, ...)
