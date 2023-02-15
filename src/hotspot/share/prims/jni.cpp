@@ -94,10 +94,10 @@
 #endif
 
 // SunnyMilkFuzzer Coverage APIs and Initializations.
-size_t SunnyMilkFuzzerCoverageCounter = 0;
-int SunnyMilkFuzzerCoverageTable[1 << 14];
+size_t SMF_cnt = 0;
+int SMF_table[1 << 14];
 int* GetSunnyMilkFuzzerCoverage() {
-  return SunnyMilkFuzzerCoverageTable;
+  return SMF_table;
 }
 
 static jint CurrentVersion = JNI_VERSION_10;

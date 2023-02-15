@@ -151,7 +151,7 @@ void InterpreterRuntime::set_bcp_and_mdp(address bcp, JavaThread *thread) {
 JRT_ENTRY(void, InterpreterRuntime::SMF_savecov(JavaThread* thread, size_t bcp_before, size_t bcp_disp))
   constexpr size_t SMF_sizemask = 1 << 14 - 1;
   size_t offset = ((bcp_before << 5) | bcp_disp) & SMF_sizemask;
-  SMF_table[offset] = smf_i;
+  SMF_table[offset] = 1;
 JRT_END
 
 #pragma GCC pop_options
