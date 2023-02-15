@@ -51,6 +51,8 @@ class InterpreterRuntime: AllStatic {
   static nmethod* frequency_counter_overflow_inner(JavaThread* thread, address branch_bcp);
 
  public:
+  // SunnyMilkFuzzer coverage save
+  static void    SMF_savecov(JavaThread* thread, address bcp_before, address bcp_disp);
   // Constants
   static void    ldc           (JavaThread* thread, bool wide);
   static void    resolve_ldc   (JavaThread* thread, Bytecodes::Code bytecode);

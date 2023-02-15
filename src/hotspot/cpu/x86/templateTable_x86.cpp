@@ -609,20 +609,6 @@ void TemplateTable::locals_index(Register reg, int offset) {
   __ negptr(reg);
 }
 
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
-
-static void SunnyMilkFuzzerPrint() {
-  constexpr size_t SunnyMilkFuzzerCoverageTable_SizeMask = 1 << 14 - 1;
-  for (int smf_i = 0; smf_i < 10; ++smf_i) {
-    SunnyMilkFuzzerCoverageCounter = 
-      (SunnyMilkFuzzerCoverageCounter + 1) & SunnyMilkFuzzerCoverageTable_SizeMask;
-    SunnyMilkFuzzerCoverageTable[SunnyMilkFuzzerCoverageCounter] = smf_i;
-  }
-}
-
-#pragma GCC pop_options
-
 void TemplateTable::iload() {
   iload_internal();
 }
@@ -2151,7 +2137,6 @@ void TemplateTable::float_cmp(bool is_float, int unordered_result) {
 }
 
 void TemplateTable::branch(bool is_jsr, bool is_wide) {
-  __ call(RuntimeAddress(CAST_FROM_FN_PTR(address, SunnyMilkFuzzerPrint)));
   __ get_method(rcx); // rcx holds method
   __ profile_taken_branch(rax, rbx); // rax holds updated MDP, rbx
                                      // holds bumped taken count
@@ -2185,6 +2170,8 @@ void TemplateTable::branch(bool is_jsr, bool is_wide) {
     __ lea(rax, at_bcp((is_wide ? 5 : 3) -
                         in_bytes(ConstMethod::codes_offset())));
     __ subptr(rax, Address(rcx, Method::const_offset()));
+    // Record the edge coverage for SunnyMilkFuzzer.
+    __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rbcp, rdx);
     // Adjust the bcp in r13 by the displacement in rdx
     __ addptr(rbcp, rdx);
     // jsr returns atos that is not an oop
@@ -2195,6 +2182,8 @@ void TemplateTable::branch(bool is_jsr, bool is_wide) {
 
   // Normal (non-jsr) branch handling
 
+  // Record the edge coverage for SunnyMilkFuzzer.
+  __ call(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rbcp, rdx);
   // Adjust the bcp in r13 by the displacement in rdx
   __ addptr(rbcp, rdx);
 

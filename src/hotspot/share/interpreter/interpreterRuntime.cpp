@@ -141,6 +141,21 @@ void InterpreterRuntime::set_bcp_and_mdp(address bcp, JavaThread *thread) {
   }
 }
 
+
+//------------------------------------------------------------------------------------------------------------------------
+// SunnyMilkFuzzer coverage save
+
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+
+JRT_ENTRY(void, InterpreterRuntime::SMF_savecov(JavaThread* thread, address bcp_before, address bcp_disp))
+  constexpr size_t SMF_sizemask = 1 << 14 - 1;
+  size_t offset = ((bcp_before << 5) | bcp_disp) & SMF_sizemask;
+  SMF_table[offset] = smf_i;
+JRT_END
+
+#pragma GCC pop_options
+
 //------------------------------------------------------------------------------------------------------------------------
 // Constants
 
