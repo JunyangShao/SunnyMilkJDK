@@ -42,8 +42,6 @@
 #include "runtime/synchronizer.hpp"
 #include "utilities/macros.hpp"
 
-#include <execinfo.h>
-
 #define __ Disassembler::hook<InterpreterMacroAssembler>(__FILE__, __LINE__, _masm)->
 
 // Global Register Names
@@ -2153,17 +2151,6 @@ void TemplateTable::float_cmp(bool is_float, int unordered_result) {
 }
 
 void TemplateTable::branch(bool is_jsr, bool is_wide) {
-  static bool print_stack_trace_once = true;
-  if (print_stack_trace_once) {
-    print_stack_trace_once = false;
-    void *callstack[512];
-    int i, frames = backtrace(callstack, 512);
-    char **strs = backtrace_symbols(callstack, frames);
-    for (i = 0; i < frames; ++i) {
-      printf("%s\n", strs[i]);
-    }
-    free(strs);
-  }
   __ call(RuntimeAddress(CAST_FROM_FN_PTR(address, SunnyMilkFuzzerPrint)));
   __ get_method(rcx); // rcx holds method
   __ profile_taken_branch(rax, rbx); // rax holds updated MDP, rbx
