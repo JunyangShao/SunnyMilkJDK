@@ -77,6 +77,8 @@
 #include "opto/runtime.hpp"
 #endif
 
+#include <stdio.h>
+
 // Helper class to access current interpreter state
 class LastFrameAccessor : public StackObj {
   frame _last_frame;
@@ -148,10 +150,13 @@ void InterpreterRuntime::set_bcp_and_mdp(address bcp, JavaThread *thread) {
 #pragma GCC push_options
 #pragma GCC optimize ("O0")
 
-JRT_ENTRY(void, InterpreterRuntime::SMF_savecov(JavaThread* thread, size_t bcp_before, size_t bcp_disp))
-  constexpr size_t SMF_sizemask = 1 << 14 - 1;
-  size_t offset = ((bcp_before << 5) | bcp_disp) & SMF_sizemask;
-  SMF_table[offset] = 1;
+JRT_ENTRY(void, InterpreterRuntime::SMF_savecov(JavaThread* thread, size_t bcp))
+  constexpr size_t SMF_sizemask = (1 << 14) - 1;
+  if (SMF_begin) {
+    // size_t offset = ((bcp_before << 5) | bcp_disp) & SMF_sizemask;
+    SMF_table[bcp & SMF_sizemask] = 1;
+    // printf("bcp = %ld, masked = %ld\n", bcp, bcp & SMF_sizemask);
+  }
 JRT_END
 
 #pragma GCC pop_options

@@ -773,6 +773,12 @@ struct JNINativeInterface_ {
 
     /* SunnyMilkFuzzer Features */
     int* (* GetSunnyMilkFuzzerCoverage)();
+
+    void (* SetSMFBegin)();
+
+    void (* UnsetSMFBegin)();
+
+    void (* ClearSMFTable)();
 };
 
 /*
@@ -1874,6 +1880,18 @@ struct JNIEnv_ {
     /* SunnyMilkFuzzer Features */
     int* GetSunnyMilkFuzzerCoverage() {
       return functions->GetSunnyMilkFuzzerCoverage();
+    }
+
+    void SetSMFBegin() {
+      return functions->SetSMFBegin();
+    }
+
+    void UnsetSMFBegin() {
+      return functions->UnsetSMFBegin();
+    }
+
+    void ClearSMFTable() {
+      return functions->ClearSMFTable();
     }
 
 #endif /* __cplusplus */

@@ -96,8 +96,21 @@
 // SunnyMilkFuzzer Coverage APIs and Initializations.
 size_t SMF_cnt = 0;
 int SMF_table[1 << 14];
+bool SMF_begin = false;
 int* GetSunnyMilkFuzzerCoverage() {
   return SMF_table;
+}
+
+void SetSMFBegin() {
+  SMF_begin = true;
+}
+
+void UnsetSMFBegin() {
+  SMF_begin = false;
+}
+
+void ClearSMFTable() {
+  memset(SMF_table, 0, (1 << 14) * sizeof(int));
 }
 
 static jint CurrentVersion = JNI_VERSION_10;
@@ -3584,7 +3597,13 @@ struct JNINativeInterface_ jni_NativeInterface = {
 
     // SunnyMilkFuzzer features
 
-    GetSunnyMilkFuzzerCoverage
+    GetSunnyMilkFuzzerCoverage,
+
+    SetSMFBegin,
+
+    UnsetSMFBegin,
+    
+    ClearSMFTable
 };
 
 

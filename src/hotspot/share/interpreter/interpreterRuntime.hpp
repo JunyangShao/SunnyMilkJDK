@@ -52,7 +52,7 @@ class InterpreterRuntime: AllStatic {
 
  public:
   // SunnyMilkFuzzer coverage save
-  static void    SMF_savecov(JavaThread* thread, size_t bcp_before, size_t bcp_disp);
+  static void    SMF_savecov(JavaThread* thread, size_t bcp);
   // Constants
   static void    ldc           (JavaThread* thread, bool wide);
   static void    resolve_ldc   (JavaThread* thread, Bytecodes::Code bytecode);

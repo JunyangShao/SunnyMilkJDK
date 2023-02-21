@@ -2171,7 +2171,9 @@ void TemplateTable::branch(bool is_jsr, bool is_wide) {
                         in_bytes(ConstMethod::codes_offset())));
     __ subptr(rax, Address(rcx, Method::const_offset()));
     // Record the edge coverage for SunnyMilkFuzzer.
-    __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rbcp, rdx);
+    __ pusha();
+    __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rbcp);
+    __ popa();
     // Adjust the bcp in r13 by the displacement in rdx
     __ addptr(rbcp, rdx);
     // jsr returns atos that is not an oop
@@ -2183,7 +2185,9 @@ void TemplateTable::branch(bool is_jsr, bool is_wide) {
   // Normal (non-jsr) branch handling
 
   // Record the edge coverage for SunnyMilkFuzzer.
-  __ call(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rbcp, rdx);
+  __ pusha();
+  __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rbcp);
+  __ popa();
   // Adjust the bcp in r13 by the displacement in rdx
   __ addptr(rbcp, rdx);
 
@@ -2380,6 +2384,13 @@ void TemplateTable::if_0cmp(Condition cc) {
   branch(false, false);
   __ bind(not_taken);
   __ profile_not_taken_branch(rax);
+
+    // SunnyMilkFuzzer save coverage
+  __ pusha();
+  __ movl(rdx, rbcp);
+  __ addptr(rdx, 1);
+  __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rdx);
+  __ popa();
 }
 
 void TemplateTable::if_icmp(Condition cc) {
@@ -2392,6 +2403,13 @@ void TemplateTable::if_icmp(Condition cc) {
   branch(false, false);
   __ bind(not_taken);
   __ profile_not_taken_branch(rax);
+
+  // SunnyMilkFuzzer save coverage
+  __ pusha();
+  __ movl(rdx, rbcp);
+  __ addptr(rdx, 1);
+  __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rdx);
+  __ popa();
 }
 
 void TemplateTable::if_nullcmp(Condition cc) {
@@ -2403,6 +2421,13 @@ void TemplateTable::if_nullcmp(Condition cc) {
   branch(false, false);
   __ bind(not_taken);
   __ profile_not_taken_branch(rax);
+
+  // SunnyMilkFuzzer save coverage
+  __ pusha();
+  __ movl(rdx, rbcp);
+  __ addptr(rdx, 1);
+  __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rdx);
+  __ popa();
 }
 
 void TemplateTable::if_acmp(Condition cc) {
@@ -2415,6 +2440,13 @@ void TemplateTable::if_acmp(Condition cc) {
   branch(false, false);
   __ bind(not_taken);
   __ profile_not_taken_branch(rax);
+
+  // SunnyMilkFuzzer save coverage
+  __ pusha();
+  __ movl(rdx, rbcp);
+  __ addptr(rdx, 1);
+  __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rdx);
+  __ popa();
 }
 
 void TemplateTable::ret() {
