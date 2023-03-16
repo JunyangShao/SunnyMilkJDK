@@ -151,12 +151,7 @@ void InterpreterRuntime::set_bcp_and_mdp(address bcp, JavaThread *thread) {
 #pragma GCC optimize ("O0")
 
 JRT_ENTRY(void, InterpreterRuntime::SMF_savecov(JavaThread* thread, size_t bcp))
-  constexpr size_t SMF_sizemask = (1 << 14) - 1;
-  if (SMF_begin) {
-    // size_t offset = ((bcp_before << 5) | bcp_disp) & SMF_sizemask;
-    SMF_table[bcp & SMF_sizemask] = 1;
-    // printf("bcp = %ld, masked = %ld\n", bcp, bcp & SMF_sizemask);
-  }
+  SMF_tracer_ptr(bcp);
 JRT_END
 
 #pragma GCC pop_options

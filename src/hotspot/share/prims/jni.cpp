@@ -95,9 +95,9 @@
 
 // SunnyMilkFuzzer Coverage APIs and Initializations.
 size_t SMF_cnt = 0;
-int SMF_table[1 << 14];
+unsigned char SMF_table[1 << 16];
 bool SMF_begin = false;
-int* GetSunnyMilkFuzzerCoverage() {
+unsigned char* GetSunnyMilkFuzzerCoverage() {
   return SMF_table;
 }
 
@@ -110,7 +110,21 @@ void UnsetSMFBegin() {
 }
 
 void ClearSMFTable() {
-  memset(SMF_table, 0, (1 << 14) * sizeof(int));
+  memset(SMF_table, 0, (1 << 16) * sizeof(unsigned char));
+}
+
+void SMF_default_tracer(uintptr_t bcp) {
+  constexpr size_t SMF_sizemask = (1 << 16) - 1;
+  if (SMF_begin) {
+    // size_t offset = ((bcp_before << 5) | bcp_disp) & SMF_sizemask;
+    SMF_table[bcp & SMF_sizemask] = 1;
+    // printf("bcp = %ld, masked = %ld\n", bcp, bcp & SMF_sizemask);
+  }
+}
+void (*SMF_tracer_ptr)(uintptr_t) = SMF_default_tracer;
+
+void SetSMFTracer(void (*tracer)(uintptr_t)) {
+    SMF_tracer_ptr = tracer;
 }
 
 static jint CurrentVersion = JNI_VERSION_10;
@@ -3603,7 +3617,9 @@ struct JNINativeInterface_ jni_NativeInterface = {
 
     UnsetSMFBegin,
     
-    ClearSMFTable
+    ClearSMFTable,
+
+    SetSMFTracer
 };
 
 

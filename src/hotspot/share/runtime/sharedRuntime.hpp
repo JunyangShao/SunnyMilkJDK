@@ -39,10 +39,12 @@ class AdapterFingerPrint;
 class vframeStream;
 
 // SunnyMilkFuzzer Coverage Information
-extern int SMF_table[1 << 14];
+extern unsigned char SMF_table[1 << 16];
 extern size_t SMF_cnt;
 extern bool SMF_begin;
-
+extern void SMF_default_tracer(uintptr_t bcp);
+extern void (*SMF_tracer_ptr)(uintptr_t);
+extern void SetSMFTracer(void (*tracer)(uintptr_t));
 
 // Runtime is the base class for various runtime interfaces
 // (InterpreterRuntime, CompilerRuntime, etc.). It provides

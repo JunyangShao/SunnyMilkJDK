@@ -38,6 +38,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 /* jni_md.h contains the machine-dependent typedefs for jbyte, jint
    and jlong */
@@ -772,13 +773,15 @@ struct JNINativeInterface_ {
        (JNIEnv* env, jclass clazz);
 
     /* SunnyMilkFuzzer Features */
-    int* (* GetSunnyMilkFuzzerCoverage)();
+    unsigned char* (* GetSunnyMilkFuzzerCoverage)();
 
     void (* SetSMFBegin)();
 
     void (* UnsetSMFBegin)();
 
     void (* ClearSMFTable)();
+
+    void (* SetSMFTracer)(void (*)(uintptr_t));
 };
 
 /*
@@ -1878,7 +1881,7 @@ struct JNIEnv_ {
     }
 
     /* SunnyMilkFuzzer Features */
-    int* GetSunnyMilkFuzzerCoverage() {
+    unsigned char* GetSunnyMilkFuzzerCoverage() {
       return functions->GetSunnyMilkFuzzerCoverage();
     }
 
@@ -1892,6 +1895,10 @@ struct JNIEnv_ {
 
     void ClearSMFTable() {
       return functions->ClearSMFTable();
+    }
+
+    void SetSMFTracer(void (*tracer)(uintptr_t)) {
+      return functions->SetSMFTracer(tracer);
     }
 
 #endif /* __cplusplus */
