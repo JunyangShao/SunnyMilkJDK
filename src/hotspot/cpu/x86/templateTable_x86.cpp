@@ -2170,10 +2170,6 @@ void TemplateTable::branch(bool is_jsr, bool is_wide) {
     __ lea(rax, at_bcp((is_wide ? 5 : 3) -
                         in_bytes(ConstMethod::codes_offset())));
     __ subptr(rax, Address(rcx, Method::const_offset()));
-    // Record the edge coverage for SunnyMilkFuzzer.
-    __ pusha();
-    __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rbcp);
-    __ popa();
     // Adjust the bcp in r13 by the displacement in rdx
     __ addptr(rbcp, rdx);
     // jsr returns atos that is not an oop
