@@ -80,6 +80,11 @@
 #include "c1/c1_Runtime1.hpp"
 #endif
 
+// SMF tracer
+void SMF_tracer(void* thread, uintptr_t bcp) {
+  SMF_tracer_ptr(bcp);
+}
+
 // Shared stub locations
 RuntimeStub*        SharedRuntime::_wrong_method_blob;
 RuntimeStub*        SharedRuntime::_wrong_method_abstract_blob;

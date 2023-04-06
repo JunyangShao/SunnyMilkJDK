@@ -1452,7 +1452,30 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
         default:                         ShouldNotReachHere();
       }
     }
+    static uintptr_t br_counter = 0;
+    static constexpr uintptr_t SMFTableMaxSizeMask = 0xFFFF;
+    // SMF coverage - taken - begin
+    if (GetSunnyMilkFuzzerCoverage() != NULL) {
+      __ push(rdx);
+      __ lea(rdx, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+      __ movb(Address(rdx, br_counter & SMFTableMaxSizeMask), 1);
+      __ pop(rdx);
+    }
+    // SMF coverage - taken - end
     __ jcc(acond,*(op->label()));
+    // SMF coverage - not taken - begin
+    if (GetSunnyMilkFuzzerCoverage() != NULL) {
+      __ push(rdx);
+      __ lea(rdx, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+
+      // push and popf is too costly, we opt to not use it.
+      // so as a workaround, we cancel the previous recorded taken branch here.
+      __ movb(Address(rdx, br_counter++ & SMFTableMaxSizeMask), 0);
+
+      __ movb(Address(rdx, br_counter++ & SMFTableMaxSizeMask), 1);
+      __ pop(rdx);
+    }
+    // SMF coverage - not taken - end
   }
 }
 

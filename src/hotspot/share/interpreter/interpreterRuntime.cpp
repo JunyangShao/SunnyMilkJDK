@@ -143,19 +143,6 @@ void InterpreterRuntime::set_bcp_and_mdp(address bcp, JavaThread *thread) {
   }
 }
 
-
-//------------------------------------------------------------------------------------------------------------------------
-// SunnyMilkFuzzer coverage save
-
-#pragma GCC push_options
-#pragma GCC optimize ("O0")
-
-JRT_ENTRY(void, InterpreterRuntime::SMF_savecov(JavaThread* thread, size_t bcp))
-  SMF_tracer_ptr(bcp);
-JRT_END
-
-#pragma GCC pop_options
-
 //------------------------------------------------------------------------------------------------------------------------
 // Constants
 

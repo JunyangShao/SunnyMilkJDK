@@ -2182,7 +2182,7 @@ void TemplateTable::branch(bool is_jsr, bool is_wide) {
 
   // Record the edge coverage for SunnyMilkFuzzer.
   __ pusha();
-  __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rbcp);
+  __ call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rbcp);
   __ popa();
   // Adjust the bcp in r13 by the displacement in rdx
   __ addptr(rbcp, rdx);
@@ -2381,11 +2381,11 @@ void TemplateTable::if_0cmp(Condition cc) {
   __ bind(not_taken);
   __ profile_not_taken_branch(rax);
 
-    // SunnyMilkFuzzer save coverage
+  // SunnyMilkFuzzer save coverage
   __ pusha();
   __ movl(rdx, rbcp);
   __ addptr(rdx, 1);
-  __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rdx);
+  __ call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rdx);
   __ popa();
 }
 
@@ -2404,7 +2404,7 @@ void TemplateTable::if_icmp(Condition cc) {
   __ pusha();
   __ movl(rdx, rbcp);
   __ addptr(rdx, 1);
-  __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rdx);
+  __ call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rdx);
   __ popa();
 }
 
@@ -2422,7 +2422,7 @@ void TemplateTable::if_nullcmp(Condition cc) {
   __ pusha();
   __ movl(rdx, rbcp);
   __ addptr(rdx, 1);
-  __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rdx);
+  __ call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rdx);
   __ popa();
 }
 
@@ -2441,7 +2441,7 @@ void TemplateTable::if_acmp(Condition cc) {
   __ pusha();
   __ movl(rdx, rbcp);
   __ addptr(rdx, 1);
-  __ call_VM(noreg, CAST_FROM_FN_PTR(address, InterpreterRuntime::SMF_savecov), rdx);
+  __ call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rdx);
   __ popa();
 }
 
