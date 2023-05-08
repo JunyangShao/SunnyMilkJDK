@@ -2148,6 +2148,21 @@ void Assembler::incl(Address dst) {
   emit_operand(rax, dst);
 }
 
+// SunnyMilkFuzzer used it!
+void Assembler::incb(Address dst) {
+  InstructionMark im(this);
+  prefix(dst);
+  emit_int8((unsigned char)0xFE);
+  emit_operand(rax, dst);
+}
+
+void Assembler::decb(Address dst) {
+  InstructionMark im(this);
+  prefix(dst);
+  emit_int8((unsigned char)0xFE);
+  emit_operand(rcx, dst);
+}
+
 void Assembler::jcc(Condition cc, Label& L, bool maybe_short) {
   InstructionMark im(this);
   assert((0 <= cc) && (cc < 16), "illegal cc");

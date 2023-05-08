@@ -851,6 +851,10 @@ private:
   void incq(Register dst);
   void incq(Address dst);
 
+  // SunnyMilkFuzzer used it!
+  void incb(Address dst);
+  void decb(Address dst);
+
   // New cpus require use of movsd and movss to avoid partial register stall
   // when loading from memory. But for old Opteron use movlpd instead of movsd.
   // The selection is done in MacroAssembler::movdbl() and movflt().

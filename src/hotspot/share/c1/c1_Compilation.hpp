@@ -32,6 +32,9 @@
 #include "memory/resourceArea.hpp"
 #include "runtime/deoptimization.hpp"
 
+// SunnyMilkFuzzer - This is a hack to filter out uninteresting methods.
+extern void SetC1CompilerMethodInteresting(bool interesting);
+
 class CompilationResourceObj;
 class XHandlers;
 class ExceptionInfo;

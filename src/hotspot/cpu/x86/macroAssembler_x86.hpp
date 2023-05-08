@@ -158,6 +158,10 @@ class MacroAssembler: public Assembler {
   void incrementq(Register reg, int value = 1);
   void incrementq(Address dst, int value = 1);
 
+  // SunnyMilk Fuzzer used it!
+  void incrementb(Address dst);
+  void decrementb(Address dst);
+
   // Support optimal SSE move instructions.
   void movflt(XMMRegister dst, XMMRegister src) {
     if (dst-> encoding() == src->encoding()) return;

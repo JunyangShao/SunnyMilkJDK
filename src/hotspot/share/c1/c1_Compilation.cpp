@@ -440,6 +440,13 @@ void Compilation::compile_method() {
     bailout("Bailing out because method is not compilable");
     return;
   }
+  // SunnyMilkFuzzer hack.
+  // const char* method_holder_name = method()->holder()->name()->as_utf8();
+  // bool name_contains_fuzz_one = strstr(method_holder_name, "alibaba") != nullptr;
+  // if (name_contains_fuzz_one)
+  //   tty->print_cr("Instrumenting %s", method()->holder()->name()->as_utf8());
+  // SetC1CompilerMethodInteresting(name_contains_fuzz_one);
+  SetC1CompilerMethodInteresting(true);
 
   if (_env->jvmti_can_hotswap_or_post_breakpoint()) {
     // We can assert evol_method because method->can_be_compiled is true.

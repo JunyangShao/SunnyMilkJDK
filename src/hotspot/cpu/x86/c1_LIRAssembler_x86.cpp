@@ -42,6 +42,39 @@
 #include "utilities/powerOfTwo.hpp"
 #include "vmreg_x86.inline.hpp"
 
+// SunnyMilkFuzzer - This is a temporary hack to filter out uninteresting methods.
+/*#include <thread>
+#include <string>
+#include <unordered_map>
+#include <mutex>
+static std::unordered_map<std::thread::id, bool> c1_compiling_methods_interesting;
+static std::mutex c1_compiling_methods_mutex;
+void SetC1CompilerMethodInteresting(bool interesting){
+  std::unique_lock<std::mutex> lock(c1_compiling_methods_mutex);
+  std::thread::id this_id = std::this_thread::get_id();
+  c1_compiling_methods_interesting[this_id] = interesting;
+}
+
+bool IsCurrentMethodInteresting() {
+  // If c1_compiling_methods_interesting contains current thread id, return it,
+  // otherwise return false.
+  std::unique_lock<std::mutex> lock(c1_compiling_methods_mutex);
+  std::thread::id this_id = std::this_thread::get_id();
+  auto it = c1_compiling_methods_interesting.find(this_id);
+  if (it != c1_compiling_methods_interesting.end()) {
+    return it->second;
+  }
+  return false;
+}*/
+thread_local bool current_method_interesting = false;
+void SetC1CompilerMethodInteresting(bool interesting){
+  current_method_interesting = interesting;
+}
+
+bool IsCurrentMethodInteresting() {
+  return current_method_interesting;
+}
+
 
 // These masks are used to provide 128-bit aligned bitmasks to the XMM
 // instructions, to allow sign-masking or sign-bit flipping.  They allow
@@ -1455,25 +1488,32 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
     static uintptr_t br_counter = 0;
     static constexpr uintptr_t SMFTableMaxSizeMask = 0xFFFF;
     // SMF coverage - taken - begin
-    if (GetSunnyMilkFuzzerCoverage() != NULL) {
-      __ push(rdx);
-      __ lea(rdx, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
-      __ movb(Address(rdx, br_counter & SMFTableMaxSizeMask), 1);
-      __ pop(rdx);
+    if (IsCurrentMethodInteresting()) {
+      __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+      __ movb(Address(rscratch1, br_counter & SMFTableMaxSizeMask), 1);
+      
+      // __ movb(rscratch2, Address(rscratch1, br_counter & SMFTableMaxSizeMask));
+      // __ lea(rscratch2, Address(rscratch2, 1));
+      // __ movb(Address(rscratch1, br_counter & SMFTableMaxSizeMask), rscratch2);
     }
     // SMF coverage - taken - end
     __ jcc(acond,*(op->label()));
     // SMF coverage - not taken - begin
-    if (GetSunnyMilkFuzzerCoverage() != NULL) {
-      __ push(rdx);
-      __ lea(rdx, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
-
+    if (IsCurrentMethodInteresting()) {
       // push and popf is too costly, we opt to not use it.
       // so as a workaround, we cancel the previous recorded taken branch here.
-      __ movb(Address(rdx, br_counter++ & SMFTableMaxSizeMask), 0);
-
-      __ movb(Address(rdx, br_counter++ & SMFTableMaxSizeMask), 1);
-      __ pop(rdx);
+      __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+      __ movb(Address(rscratch1, br_counter++ & SMFTableMaxSizeMask), 0);
+      __ movb(Address(rscratch1, br_counter++ & SMFTableMaxSizeMask), 1);
+      
+      // __ movb(rscratch2, Address(rscratch1, br_counter & SMFTableMaxSizeMask));
+      // __ lea(rscratch2, Address(rscratch2, -1));
+      // __ movb(Address(rscratch1, br_counter & SMFTableMaxSizeMask), rscratch2);
+      
+      // __ movb(rscratch2, Address(rscratch1, (br_counter + 1) & SMFTableMaxSizeMask));
+      // __ lea(rscratch2, Address(rscratch2, 1));
+      // __ movb(Address(rscratch1, (br_counter + 1) & SMFTableMaxSizeMask), rscratch2);
+      br_counter += 2;
     }
     // SMF coverage - not taken - end
   }

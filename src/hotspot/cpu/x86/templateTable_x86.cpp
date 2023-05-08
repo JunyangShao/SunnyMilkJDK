@@ -2181,9 +2181,9 @@ void TemplateTable::branch(bool is_jsr, bool is_wide) {
   // Normal (non-jsr) branch handling
 
   // Record the edge coverage for SunnyMilkFuzzer.
-  __ pusha();
-  __ call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rbcp);
-  __ popa();
+  // __ pusha();
+  // __ call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rbcp);
+  // __ popa();
   // Adjust the bcp in r13 by the displacement in rdx
   __ addptr(rbcp, rdx);
 
@@ -2371,9 +2371,17 @@ void TemplateTable::branch(bool is_jsr, bool is_wide) {
   }
 }
 
+static constexpr uintptr_t SMFTableMaxSizeMask = 0xFFFF;
 void TemplateTable::if_0cmp(Condition cc) {
   transition(itos, vtos);
   // assume branch is more often taken than not (loops use backward branches)
+  
+  // SunnyMilkFuzzer save coverage
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ movl(rscratch2, rbcp);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ movb(Address(rscratch1, rscratch2, Address::times_1), 1);
+
   Label not_taken;
   __ testl(rax, rax);
   __ jcc(j_not(cc), not_taken);
@@ -2382,16 +2390,32 @@ void TemplateTable::if_0cmp(Condition cc) {
   __ profile_not_taken_branch(rax);
 
   // SunnyMilkFuzzer save coverage
-  __ pusha();
-  __ movl(rdx, rbcp);
-  __ addptr(rdx, 1);
-  __ call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rdx);
-  __ popa();
+  // __ pusha();
+  // __ movl(rdx, rbcp);
+  // __ addptr(rdx, 1);
+  // __ call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rdx);
+  // __ popa();
+
+  // SunnyMilkFuzzer save coverage
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ movl(rscratch2, rbcp);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ movb(Address(rscratch1, rscratch2, Address::times_1), 0);
+  __ addl(rscratch2, 1);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ movb(Address(rscratch1, rscratch2, Address::times_1), 1);
 }
 
 void TemplateTable::if_icmp(Condition cc) {
   transition(itos, vtos);
   // assume branch is more often taken than not (loops use backward branches)
+
+  // SunnyMilkFuzzer save coverage
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ movl(rscratch2, rbcp);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ movb(Address(rscratch1, rscratch2, Address::times_1), 1);
+
   Label not_taken;
   __ pop_i(rdx);
   __ cmpl(rdx, rax);
@@ -2401,16 +2425,36 @@ void TemplateTable::if_icmp(Condition cc) {
   __ profile_not_taken_branch(rax);
 
   // SunnyMilkFuzzer save coverage
-  __ pusha();
-  __ movl(rdx, rbcp);
-  __ addptr(rdx, 1);
-  __ call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rdx);
-  __ popa();
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ movl(rscratch2, rbcp);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ movb(Address(rscratch1, rscratch2, Address::times_1), 0);
+  __ addl(rscratch2, 1);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ movb(Address(rscratch1, rscratch2, Address::times_1), 1);
 }
 
 void TemplateTable::if_nullcmp(Condition cc) {
   transition(atos, vtos);
   // assume branch is more often taken than not (loops use backward branches)
+  
+  // SunnyMilkFuzzer save coverage
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ movl(rscratch2, rbcp);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ movb(Address(rscratch1, rscratch2, Address::times_1), 1);
+
+  // SunnyMilkFuzzer save coverage
+  // Addition using lea, avoiding the effect of overflow.
+  // __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  // __ movl(rscratch2, rbcp);
+  // __ andl(rscratch2, SMFTableMaxSizeMask);
+  // __ lea(rscratch2, Address(rscratch1, rscratch2, Address::times_1));
+
+  // __ movb(rscratch1, Address(rscratch2, 0));
+  // __ lea(rscratch1, Address(rscratch1, 1));
+  // __ movb(Address(rscratch2, 0), rscratch1);
+
   Label not_taken;
   __ testptr(rax, rax);
   __ jcc(j_not(cc), not_taken);
@@ -2419,16 +2463,43 @@ void TemplateTable::if_nullcmp(Condition cc) {
   __ profile_not_taken_branch(rax);
 
   // SunnyMilkFuzzer save coverage
-  __ pusha();
-  __ movl(rdx, rbcp);
-  __ addptr(rdx, 1);
-  __ call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rdx);
-  __ popa();
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ movl(rscratch2, rbcp);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ movb(Address(rscratch1, rscratch2, Address::times_1), 0);
+  __ addl(rscratch2, 1);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ movb(Address(rscratch1, rscratch2, Address::times_1), 1);
+
+  // SunnyMilkFuzzer save coverage
+  // __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  // __ movl(rscratch2, rbcp);
+  // __ andl(rscratch2, SMFTableMaxSizeMask);
+  // __ lea(rscratch2, Address(rscratch1, rscratch2, Address::times_1));
+  
+  // __ movb(rscratch1, Address(rscratch2, 0));
+  // __ lea(rscratch1, Address(rscratch1, -1));
+  // __ movb(Address(rscratch2, 0), rscratch1);
+
+  // __ addl(rscratch2, 1);
+  // __ andl(rscratch2, SMFTableMaxSizeMask);
+
+  // __ movb(rscratch1, Address(rscratch2, 0));
+  // __ lea(rscratch1, Address(rscratch1, 1));
+  // __ movb(Address(rscratch2, 0), rscratch1);
 }
 
 void TemplateTable::if_acmp(Condition cc) {
   transition(atos, vtos);
   // assume branch is more often taken than not (loops use backward branches)
+
+  // SunnyMilkFuzzer save coverage
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ movl(rscratch2, rbcp);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ movb(Address(rscratch1, rscratch2, Address::times_1), 1);
+
+
   Label not_taken;
   __ pop_ptr(rdx);
   __ cmpoop(rdx, rax);
@@ -2438,11 +2509,13 @@ void TemplateTable::if_acmp(Condition cc) {
   __ profile_not_taken_branch(rax);
 
   // SunnyMilkFuzzer save coverage
-  __ pusha();
-  __ movl(rdx, rbcp);
-  __ addptr(rdx, 1);
-  __ call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rdx);
-  __ popa();
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ movl(rscratch2, rbcp);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ movb(Address(rscratch1, rscratch2, Address::times_1), 0);
+  __ addl(rscratch2, 1);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ movb(Address(rscratch1, rscratch2, Address::times_1), 1);
 }
 
 void TemplateTable::ret() {
