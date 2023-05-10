@@ -1460,28 +1460,57 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
     __ jmp (*(op->label()));
   } else {
     Assembler::Condition acond = Assembler::zero;
+    Assembler::Condition acond_rev = Assembler::zero;
     if (op->code() == lir_cond_float_branch) {
       assert(op->ublock() != NULL, "must have unordered successor");
       __ jcc(Assembler::parity, *(op->ublock()->label()));
       switch(op->cond()) {
-        case lir_cond_equal:        acond = Assembler::equal;      break;
-        case lir_cond_notEqual:     acond = Assembler::notEqual;   break;
-        case lir_cond_less:         acond = Assembler::below;      break;
-        case lir_cond_lessEqual:    acond = Assembler::belowEqual; break;
-        case lir_cond_greaterEqual: acond = Assembler::aboveEqual; break;
-        case lir_cond_greater:      acond = Assembler::above;      break;
+        case lir_cond_equal:        acond = Assembler::equal;      
+                                    acond_rev = Assembler::notEqual;
+                                    break;
+        case lir_cond_notEqual:     acond = Assembler::notEqual;   
+                                    acond_rev = Assembler::equal;
+                                    break;
+        case lir_cond_less:         acond = Assembler::below;      
+                                    acond_rev = Assembler::aboveEqual;
+                                    break;
+        case lir_cond_lessEqual:    acond = Assembler::belowEqual; 
+                                    acond_rev = Assembler::above;
+                                    break;
+        case lir_cond_greaterEqual: acond = Assembler::aboveEqual; 
+                                    acond_rev = Assembler::below;
+                                    break;
+        case lir_cond_greater:      acond = Assembler::above;      
+                                    acond_rev = Assembler::belowEqual;
+                                    break;
         default:                         ShouldNotReachHere();
       }
     } else {
       switch (op->cond()) {
-        case lir_cond_equal:        acond = Assembler::equal;       break;
-        case lir_cond_notEqual:     acond = Assembler::notEqual;    break;
-        case lir_cond_less:         acond = Assembler::less;        break;
-        case lir_cond_lessEqual:    acond = Assembler::lessEqual;   break;
-        case lir_cond_greaterEqual: acond = Assembler::greaterEqual;break;
-        case lir_cond_greater:      acond = Assembler::greater;     break;
-        case lir_cond_belowEqual:   acond = Assembler::belowEqual;  break;
-        case lir_cond_aboveEqual:   acond = Assembler::aboveEqual;  break;
+        case lir_cond_equal:        acond = Assembler::equal;       
+                                    acond_rev = Assembler::notEqual;
+                                    break;
+        case lir_cond_notEqual:     acond = Assembler::notEqual;
+                                    acond_rev = Assembler::equal;
+                                    break;
+        case lir_cond_less:         acond = Assembler::less;
+                                    acond_rev = Assembler::greaterEqual;
+                                    break;
+        case lir_cond_lessEqual:    acond = Assembler::lessEqual;
+                                    acond_rev = Assembler::greater;
+                                    break;
+        case lir_cond_greaterEqual: acond = Assembler::greaterEqual;
+                                    acond_rev = Assembler::less;
+                                    break;
+        case lir_cond_greater:      acond = Assembler::greater;
+                                    acond_rev = Assembler::lessEqual;
+                                    break;
+        case lir_cond_belowEqual:   acond = Assembler::belowEqual;
+                                    acond_rev = Assembler::above;
+                                    break;
+        case lir_cond_aboveEqual:   acond = Assembler::aboveEqual;
+                                    acond_rev = Assembler::below;
+                                    break;
         default:                         ShouldNotReachHere();
       }
     }
@@ -1489,31 +1518,54 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
     static constexpr uintptr_t SMFTableMaxSizeMask = 0xFFFF;
     // SMF coverage - taken - begin
     if (IsCurrentMethodInteresting()) {
-      __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
-      __ movb(Address(rscratch1, br_counter & SMFTableMaxSizeMask), 1);
+      // Boolean flag solution.
+      // __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+      // __ movb(Address(rscratch1, br_counter & SMFTableMaxSizeMask), 1);
       
+      // Counter solution.
+      // __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+      // __ push(rscratch2);
       // __ movb(rscratch2, Address(rscratch1, br_counter & SMFTableMaxSizeMask));
       // __ lea(rscratch2, Address(rscratch2, 1));
       // __ movb(Address(rscratch1, br_counter & SMFTableMaxSizeMask), rscratch2);
+      // __ pop(rscratch2);
+
+      // Counter solution - jmp optimized
+      // In this solution, we assume that FLAGAS register is always used tightly,
+      // That is, there is no gap between the usage of a flag bit before the instruction setting the flag bit.
+      // Please comment out the `__ jcc(acond,*(op->label()));` below when using this solution.
+      Label not_taken;
+      __ jcc(acond_rev, not_taken);
+      __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() + br_counter++, relocInfo::none));
+      __ incrementb(Address(rscratch1, 0));
+      __ jmp(*(op->label()));
+      __ bind(not_taken);
+      __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() + br_counter++, relocInfo::none));
+      __ incrementb(Address(rscratch1, 0));
     }
     // SMF coverage - taken - end
-    __ jcc(acond,*(op->label()));
+    // __ jcc(acond,*(op->label()));
     // SMF coverage - not taken - begin
     if (IsCurrentMethodInteresting()) {
       // push and popf is too costly, we opt to not use it.
       // so as a workaround, we cancel the previous recorded taken branch here.
-      __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
-      __ movb(Address(rscratch1, br_counter++ & SMFTableMaxSizeMask), 0);
-      __ movb(Address(rscratch1, br_counter++ & SMFTableMaxSizeMask), 1);
       
+      // Boolean flag solution.
+      // __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+      // __ movb(Address(rscratch1, br_counter++ & SMFTableMaxSizeMask), 0);
+      // __ movb(Address(rscratch1, br_counter++ & SMFTableMaxSizeMask), 1);
+      
+      // Counter solution.
+      // __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+      // __ push(rscratch2);
       // __ movb(rscratch2, Address(rscratch1, br_counter & SMFTableMaxSizeMask));
       // __ lea(rscratch2, Address(rscratch2, -1));
-      // __ movb(Address(rscratch1, br_counter & SMFTableMaxSizeMask), rscratch2);
-      
-      // __ movb(rscratch2, Address(rscratch1, (br_counter + 1) & SMFTableMaxSizeMask));
+      // __ movb(Address(rscratch1, br_counter++ & SMFTableMaxSizeMask), rscratch2);
+      // __ movb(rscratch2, Address(rscratch1, br_counter & SMFTableMaxSizeMask));
       // __ lea(rscratch2, Address(rscratch2, 1));
-      // __ movb(Address(rscratch1, (br_counter + 1) & SMFTableMaxSizeMask), rscratch2);
-      br_counter += 2;
+      // __ movb(Address(rscratch1, br_counter++ & SMFTableMaxSizeMask), rscratch2);
+      // __ pop(rscratch2);
+      
     }
     // SMF coverage - not taken - end
   }
