@@ -1536,11 +1536,11 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
       // Please comment out the `__ jcc(acond,*(op->label()));` below when using this solution.
       Label not_taken;
       __ jcc(acond_rev, not_taken);
-      __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() + br_counter++, relocInfo::none));
+      __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() + (br_counter++ & SMFTableMaxSizeMask), relocInfo::none));
       __ incrementb(Address(rscratch1, 0));
       __ jmp(*(op->label()));
       __ bind(not_taken);
-      __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() + br_counter++, relocInfo::none));
+      __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() + (br_counter++ & SMFTableMaxSizeMask), relocInfo::none));
       __ incrementb(Address(rscratch1, 0));
     }
     // SMF coverage - taken - end
