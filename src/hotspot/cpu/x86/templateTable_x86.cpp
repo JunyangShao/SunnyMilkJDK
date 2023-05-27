@@ -2630,6 +2630,15 @@ void TemplateTable::tableswitch() {
   // lookup dispatch offset
   __ subl(rax, rcx);
   __ movl(rdx, Address(rbx, rax, Address::times_4, 3 * BytesPerInt));
+
+  // SunnyMilkFuzzer save coverage
+  // using `incrementb`.
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ movl(rscratch2, rbcp);
+  __ addl(rscratch2, rax);
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ incrementb(Address(rscratch1, rscratch2, Address::times_1));
+
   __ profile_switch_case(rax, rbx, rcx);
   // continue execution
   __ bind(continue_execution);
@@ -2640,6 +2649,18 @@ void TemplateTable::tableswitch() {
   __ dispatch_only(vtos, true);
   // handle default
   __ bind(default_case);
+
+  // SunnyMilkFuzzer save coverage
+  // using `incrementb`.
+  __ movl(rscratch2, rbcp);
+  __ movl(rscratch1, rcx); // lo
+  __ subl(rscratch1, rdx); // lo - hi
+  __ addl(rscratch1, 1);   // lo - hi + 1
+  __ addl(rscratch2, rscratch1);   // default is at the outer edge of the table.
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ incrementb(Address(rscratch1, rscratch2, Address::times_1));
+
   __ profile_switch_default(rax);
   __ movl(rdx, Address(rbx, 0));
   __ jmp(continue_execution);
@@ -2672,11 +2693,29 @@ void TemplateTable::fast_linearswitch() {
   __ decrementl(rcx);
   __ jcc(Assembler::greaterEqual, loop);
   // default case
+
+  // SunnyMilkFuzzer save coverage
+  // using `incrementb`.
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ movl(rscratch2, rbcp);
+  __ addl(rscratch2, rax); // add counter
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ incrementb(Address(rscratch1, rscratch2, Address::times_1));
+
   __ profile_switch_default(rax);
   __ movl(rdx, Address(rbx, 0));
   __ jmp(continue_execution);
   // entry found -> get offset
   __ bind(found);
+
+  // SunnyMilkFuzzer save coverage
+  // using `incrementb`.
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ movl(rscratch2, rbcp);
+  __ addl(rscratch2, rax); // add counter, noted that now rax is the outer edge of the table.
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ incrementb(Address(rscratch1, rscratch2, Address::times_1));
+
   __ movl(rdx, Address(rbx, rcx, Address::times_8, 3 * BytesPerInt));
   __ profile_switch_case(rcx, rax, rbx);
   // continue execution
@@ -2778,6 +2817,14 @@ void TemplateTable::fast_binaryswitch() {
   __ cmpl(key, temp);
   __ jcc(Assembler::notEqual, default_case);
 
+  // SunnyMilkFuzzer save coverage
+  // using `incrementb`.
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ movl(rscratch2, rbcp);
+  __ addl(rscratch2, i); // add index
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ incrementb(Address(rscratch1, rscratch2, Address::times_1));
+
   // entry found -> j = offset
   __ movl(j , Address(array, i, Address::times_8, BytesPerInt));
   __ profile_switch_case(i, key, array);
@@ -2793,6 +2840,17 @@ void TemplateTable::fast_binaryswitch() {
 
   // default case -> j = default offset
   __ bind(default_case);
+
+  // SunnyMilkFuzzer save coverage
+  // using `incrementb`.
+  __ movl(rscratch2, rbcp);
+  __ movl(rscratch1, Address(array, -BytesPerInt));
+  __ bswapl(rscratch1); // rscratch1 = length(array);
+  __ addl(rscratch2, rscratch1); // default is at the edge.
+  __ andl(rscratch2, SMFTableMaxSizeMask);
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  __ incrementb(Address(rscratch1, rscratch2, Address::times_1));
+
   __ profile_switch_default(i);
   __ movl(j, Address(array, -2 * BytesPerInt));
   __ bswapl(j);

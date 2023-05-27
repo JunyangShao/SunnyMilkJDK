@@ -2331,7 +2331,7 @@ void LIRGenerator::do_UnsafeGetAndSetObject(UnsafeGetAndSetObject* x) {
   set_result(x, result);
 }
 
-void LIRGenerator::do_SwitchRanges(SwitchRangeArray* x, LIR_Opr value, BlockBegin* default_sux) {
+void LIRGenerator::do_SwitchRanges(SwitchRangeArray* x, LIR_Opr value, BlockBegin* default_sux, Switch* orig_x) {
   int lng = x->length();
 
   for (int i = 0; i < lng; i++) {
@@ -2341,22 +2341,42 @@ void LIRGenerator::do_SwitchRanges(SwitchRangeArray* x, LIR_Opr value, BlockBegi
     BlockBegin* dest = one_range->sux();
     if (low_key == high_key) {
       __ cmp(lir_cond_equal, value, low_key);
-      __ branch(lir_cond_equal, dest);
+      if (orig_x->smf_probe_status() == 0 || orig_x->smf_probe_status() == 2)
+        __ branch(lir_cond_equal, dest, 2, orig_x->smf_bcp() + low_key);
+      else
+        __ branch(lir_cond_equal, dest);
     } else if (high_key - low_key == 1) {
-      __ cmp(lir_cond_equal, value, low_key);
-      __ branch(lir_cond_equal, dest);
-      __ cmp(lir_cond_equal, value, high_key);
-      __ branch(lir_cond_equal, dest);
+      if (orig_x->smf_probe_status() == 0 || orig_x->smf_probe_status() == 2) {
+        __ cmp(lir_cond_equal, value, low_key);
+        __ branch(lir_cond_equal, dest, 2, orig_x->smf_bcp() + low_key);
+        __ cmp(lir_cond_equal, value, high_key);
+        __ branch(lir_cond_equal, dest, 2, orig_x->smf_bcp() + high_key);
+      } else {
+        __ cmp(lir_cond_equal, value, low_key);
+        __ branch(lir_cond_equal, dest);
+        __ cmp(lir_cond_equal, value, high_key);
+        __ branch(lir_cond_equal, dest);
+      }
     } else {
       LabelObj* L = new LabelObj();
       __ cmp(lir_cond_less, value, low_key);
+      // SunnyMilkFuzzer.
+      // workaround for now, might need to completely transfer the instrumentation to the LIR
+      // later to make it more efficient and correct.
       __ branch(lir_cond_less, L->label());
       __ cmp(lir_cond_lessEqual, value, high_key);
-      __ branch(lir_cond_lessEqual, dest);
+      if (orig_x->smf_probe_status() == 0 || orig_x->smf_probe_status() == 2)
+        __ branch(lir_cond_lessEqual, dest, 2, orig_x->smf_bcp() + low_key);
+      else
+        __ branch(lir_cond_lessEqual, dest);
       __ branch_destination(L->label());
     }
   }
-  __ jump(default_sux);
+  if (orig_x->smf_probe_status() <= 1) {
+    __ jump(default_sux, 2, orig_x->smf_bcp() + orig_x->length());
+  } else {
+    __ jump(default_sux);
+  }
 }
 
 
@@ -2468,13 +2488,24 @@ void LIRGenerator::do_TableSwitch(TableSwitch* x) {
   }
 
   if (UseTableRanges) {
-    do_SwitchRanges(create_lookup_ranges(x), value, x->default_sux());
+    do_SwitchRanges(create_lookup_ranges(x), value, x->default_sux(), x);
   } else {
-    for (int i = 0; i < len; i++) {
-      __ cmp(lir_cond_equal, value, i + lo_key);
-      __ branch(lir_cond_equal, x->sux_at(i));
+    if (x->smf_probe_status() == 0 || x->smf_probe_status() == 2) {
+      for (int i = 0; i < len; i++) {
+        __ cmp(lir_cond_equal, value, i + lo_key);
+        __ branch(lir_cond_equal, x->sux_at(i), 2, x->smf_bcp() + i);
+      }
+    } else {
+      for (int i = 0; i < len; i++) {
+        __ cmp(lir_cond_equal, value, i + lo_key);
+        __ branch(lir_cond_equal, x->sux_at(i));
+      }
     }
-    __ jump(x->default_sux());
+    if (x->smf_probe_status() <= 1) {
+      __ jump(x->default_sux(), 2, x->smf_bcp() + len);
+    } else {
+      __ jump(x->default_sux());
+    }
   }
 }
 
@@ -2526,14 +2557,25 @@ void LIRGenerator::do_LookupSwitch(LookupSwitch* x) {
   }
 
   if (UseTableRanges) {
-    do_SwitchRanges(create_lookup_ranges(x), value, x->default_sux());
+    do_SwitchRanges(create_lookup_ranges(x), value, x->default_sux(), x);
   } else {
     int len = x->length();
-    for (int i = 0; i < len; i++) {
-      __ cmp(lir_cond_equal, value, x->key_at(i));
-      __ branch(lir_cond_equal, x->sux_at(i));
+    if (x->smf_probe_status() == 0 || x->smf_probe_status() == 2) {
+      for (int i = 0; i < len; i++) {
+        __ cmp(lir_cond_equal, value, x->key_at(i));
+        __ branch(lir_cond_equal, x->sux_at(i), 2, x->smf_bcp() + i);
+      }
+    } else {
+      for (int i = 0; i < len; i++) {
+        __ cmp(lir_cond_equal, value, x->key_at(i));
+        __ branch(lir_cond_equal, x->sux_at(i));
+      }
     }
-    __ jump(x->default_sux());
+    if (x->smf_probe_status() <= 1) {
+      __ jump(x->default_sux(), 2, x->smf_bcp() + len);
+    } else {
+      __ jump(x->default_sux());
+    }
   }
 }
 

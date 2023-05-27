@@ -1502,10 +1502,11 @@ void LIRGenerator::do_If(If* x) {
   // Generate branch profiling. Profiling code doesn't kill flags.
   profile_branch(x, cond);
   move_to_phi(x->state());
+  // `__ branch` and `__ jump` changed for SunnyMilkFuzzer.
   if (x->x()->type()->is_float_kind()) {
-    __ branch(lir_cond(cond), x->tsux(), x->usux());
+    __ branch(lir_cond(cond), x->tsux(), x->usux(), x->smf_probe_status(), x->smf_bcp());
   } else {
-    __ branch(lir_cond(cond), x->tsux());
+    __ branch(lir_cond(cond), x->tsux(), x->smf_probe_status(), x->smf_bcp());
   }
   assert(x->default_sux() == x->fsux(), "wrong destination above");
   __ jump(x->default_sux());

@@ -1220,13 +1220,17 @@ void GraphBuilder::_goto(int from_bci, int to_bci) {
 }
 
 
-void GraphBuilder::if_node(Value x, If::Condition cond, Value y, ValueStack* state_before) {
+void GraphBuilder::if_node(Value x, If::Condition cond, Value y, ValueStack* state_before, address smf_bcp = NULL) {
   BlockBegin* tsux = block_at(stream()->get_dest());
   BlockBegin* fsux = block_at(stream()->next_bci());
   bool is_bb = tsux->bci() < stream()->cur_bci() || fsux->bci() < stream()->cur_bci();
   // In case of loop invariant code motion or predicate insertion
   // before the body of a loop the state is needed
-  Instruction *i = append(new If(x, cond, false, y, tsux, fsux, (is_bb || compilation()->is_optimistic()) ? state_before : NULL, is_bb));
+  // Modified for SunnyMilkFuzzer
+  Instruction *i = append(
+    if_node_smf(
+      new If(x, cond, false, y, tsux, fsux, (is_bb || compilation()->is_optimistic()) ? state_before : NULL, is_bb),
+      smf_bcp));
 
   assert(i->as_Goto() == NULL ||
          (i->as_Goto()->sux_at(0) == tsux  && i->as_Goto()->is_safepoint() == tsux->bci() < stream()->cur_bci()) ||
@@ -1273,28 +1277,28 @@ void GraphBuilder::if_node(Value x, If::Condition cond, Value y, ValueStack* sta
   }
 }
 
-
-void GraphBuilder::if_zero(ValueType* type, If::Condition cond) {
+// Modified for SunnyMilkFuzzer (if_*)
+void GraphBuilder::if_zero(ValueType* type, If::Condition cond, address smf_bcp = NULL) {
   Value y = append(new Constant(intZero));
   ValueStack* state_before = copy_state_before();
   Value x = ipop();
-  if_node(x, cond, y, state_before);
+  if_node(x, cond, y, state_before, smf_bcp);
 }
 
 
-void GraphBuilder::if_null(ValueType* type, If::Condition cond) {
+void GraphBuilder::if_null(ValueType* type, If::Condition cond, address smf_bcp = NULL) {
   Value y = append(new Constant(objectNull));
   ValueStack* state_before = copy_state_before();
   Value x = apop();
-  if_node(x, cond, y, state_before);
+  if_node(x, cond, y, state_before, smf_bcp);
 }
 
 
-void GraphBuilder::if_same(ValueType* type, If::Condition cond) {
+void GraphBuilder::if_same(ValueType* type, If::Condition cond, address smf_bcp = NULL) {
   ValueStack* state_before = copy_state_before();
   Value y = pop(type);
   Value x = pop(type);
-  if_node(x, cond, y, state_before);
+  if_node(x, cond, y, state_before, smf_bcp);
 }
 
 
@@ -1330,7 +1334,7 @@ void GraphBuilder::ret(int local_index) {
 }
 
 
-void GraphBuilder::table_switch() {
+void GraphBuilder::table_switch(address smf_bcp) {
   Bytecode_tableswitch sw(stream());
   const int l = sw.length();
   if (CanonicalizeNodes && l == 1 && compilation()->env()->comp_level() != CompLevel_full_profile) {
@@ -1344,7 +1348,8 @@ void GraphBuilder::table_switch() {
     // In case of loop invariant code motion or predicate insertion
     // before the body of a loop the state is needed
     ValueStack* state_before = copy_state_if_bb(is_bb);
-    append(new If(ipop(), If::eql, true, key, tsux, fsux, state_before, is_bb));
+    // Modified for SunnyMilkFuzzer
+    append(if_node_smf(new If(ipop(), If::eql, true, key, tsux, fsux, state_before, is_bb), smf_bcp));
   } else {
     // collect successors
     BlockList* sux = new BlockList(l + 1, NULL);
@@ -1360,7 +1365,8 @@ void GraphBuilder::table_switch() {
     // In case of loop invariant code motion or predicate insertion
     // before the body of a loop the state is needed
     ValueStack* state_before = copy_state_if_bb(has_bb);
-    Instruction* res = append(new TableSwitch(ipop(), sux, sw.low_key(), state_before, has_bb));
+    Instruction* res =
+      append(switch_node_smf(new TableSwitch(ipop(), sux, sw.low_key(), state_before, has_bb), smf_bcp));
 #ifdef ASSERT
     if (res->as_Goto()) {
       for (i = 0; i < l; i++) {
@@ -1374,7 +1380,7 @@ void GraphBuilder::table_switch() {
 }
 
 
-void GraphBuilder::lookup_switch() {
+void GraphBuilder::lookup_switch(address smf_bcp) {
   Bytecode_lookupswitch sw(stream());
   const int l = sw.number_of_pairs();
   if (CanonicalizeNodes && l == 1 && compilation()->env()->comp_level() != CompLevel_full_profile) {
@@ -1390,7 +1396,8 @@ void GraphBuilder::lookup_switch() {
     // In case of loop invariant code motion or predicate insertion
     // before the body of a loop the state is needed
     ValueStack* state_before = copy_state_if_bb(is_bb);;
-    append(new If(ipop(), If::eql, true, key, tsux, fsux, state_before, is_bb));
+    // Modified for SunnyMilkFuzzer
+    append(if_node_smf(new If(ipop(), If::eql, true, key, tsux, fsux, state_before, is_bb), smf_bcp));
   } else {
     // collect successors & keys
     BlockList* sux = new BlockList(l + 1, NULL);
@@ -1409,7 +1416,8 @@ void GraphBuilder::lookup_switch() {
     // In case of loop invariant code motion or predicate insertion
     // before the body of a loop the state is needed
     ValueStack* state_before = copy_state_if_bb(has_bb);
-    Instruction* res = append(new LookupSwitch(ipop(), sux, keys, state_before, has_bb));
+    Instruction* res =
+      append(switch_node_smf(new LookupSwitch(ipop(), sux, keys, state_before, has_bb), smf_bcp));
 #ifdef ASSERT
     if (res->as_Goto()) {
       for (i = 0; i < l; i++) {
@@ -1420,6 +1428,55 @@ void GraphBuilder::lookup_switch() {
     }
 #endif
   }
+}
+
+If* GraphBuilder::if_node_smf(If* cur_if_node, address smf_bcp) {
+  if (cur_if_node != NULL && smf_bcp != NULL) {
+    static constexpr uintptr_t SMF_SIZE_MASK = 0xFFFF;
+    unsigned char smf_probe_1 = *(GetSunnyMilkFuzzerCoverage() + (((uintptr_t) smf_bcp) & SMF_SIZE_MASK));
+    unsigned char smf_probe_2 = *(GetSunnyMilkFuzzerCoverage() + (((uintptr_t) smf_bcp + 1) & SMF_SIZE_MASK));
+    cur_if_node->set_smf_bcp(smf_bcp);
+    if (smf_probe_1 > 0 && smf_probe_2 > 0) {
+      // exhausted.
+      cur_if_node->set_smf_probe_status(3);
+    } else if (smf_probe_2 > 0) {
+      cur_if_node->set_smf_probe_status(2);
+    } else if (smf_probe_1 > 0) {
+      cur_if_node->set_smf_probe_status(1);
+    } else {
+      cur_if_node->set_smf_probe_status(0);
+    }
+  }
+  return cur_if_node;
+}
+
+Switch* GraphBuilder::switch_node_smf(Switch* cur_switch_node, address smf_bcp) {
+  if (cur_switch_node != NULL && smf_bcp != NULL) {
+    static constexpr uintptr_t SMF_SIZE_MASK = 0xFFFF;
+    unsigned char smf_probe_default =
+      *(GetSunnyMilkFuzzerCoverage() + ((((uintptr_t) smf_bcp) + cur_switch_node->length()) & SMF_SIZE_MASK));
+    bool smf_probe_default_exhausted = smf_probe_default > 0;
+    bool smf_probe_case_exhausted = false;
+    for (int i = 0; i < cur_switch_node->length(); ++i) {
+      unsigned char smf_probe = *(GetSunnyMilkFuzzerCoverage() + ((((uintptr_t) smf_bcp) + i) & SMF_SIZE_MASK));
+      if (smf_probe > 0) {
+        smf_probe_case_exhausted = true;
+        break;
+      }
+    }
+    cur_switch_node->set_smf_bcp(smf_bcp);
+    if (smf_probe_case_exhausted && smf_probe_default_exhausted) {
+      // exhausted.
+      cur_switch_node->set_smf_probe_status(3);
+    } else if (smf_probe_default_exhausted) {
+      cur_switch_node->set_smf_probe_status(2);
+    } else if (smf_probe_case_exhausted) {
+      cur_switch_node->set_smf_probe_status(1);
+    } else {
+      cur_switch_node->set_smf_probe_status(0);
+    }
+  }
+  return cur_switch_node;
 }
 
 void GraphBuilder::call_register_finalizer() {
@@ -2683,6 +2740,9 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
       push_exception = false;
     }
 
+    // SunnyMilkFuzzer - bytecode pointer
+    address smf_bcp = method()->get_Method()->bcp_from(s.cur_bci());
+
     // handle bytecode
     switch (code) {
       case Bytecodes::_nop            : /* nothing to do */ break;
@@ -2838,25 +2898,25 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
       case Bytecodes::_fcmpg          : compare_op(floatType , code); break;
       case Bytecodes::_dcmpl          : compare_op(doubleType, code); break;
       case Bytecodes::_dcmpg          : compare_op(doubleType, code); break;
-      case Bytecodes::_ifeq           : if_zero(intType   , If::eql); break;
-      case Bytecodes::_ifne           : if_zero(intType   , If::neq); break;
-      case Bytecodes::_iflt           : if_zero(intType   , If::lss); break;
-      case Bytecodes::_ifge           : if_zero(intType   , If::geq); break;
-      case Bytecodes::_ifgt           : if_zero(intType   , If::gtr); break;
-      case Bytecodes::_ifle           : if_zero(intType   , If::leq); break;
-      case Bytecodes::_if_icmpeq      : if_same(intType   , If::eql); break;
-      case Bytecodes::_if_icmpne      : if_same(intType   , If::neq); break;
-      case Bytecodes::_if_icmplt      : if_same(intType   , If::lss); break;
-      case Bytecodes::_if_icmpge      : if_same(intType   , If::geq); break;
-      case Bytecodes::_if_icmpgt      : if_same(intType   , If::gtr); break;
-      case Bytecodes::_if_icmple      : if_same(intType   , If::leq); break;
-      case Bytecodes::_if_acmpeq      : if_same(objectType, If::eql); break;
-      case Bytecodes::_if_acmpne      : if_same(objectType, If::neq); break;
+      case Bytecodes::_ifeq           : if_zero(intType   , If::eql, smf_bcp); break;
+      case Bytecodes::_ifne           : if_zero(intType   , If::neq, smf_bcp); break;
+      case Bytecodes::_iflt           : if_zero(intType   , If::lss, smf_bcp); break;
+      case Bytecodes::_ifge           : if_zero(intType   , If::geq, smf_bcp); break;
+      case Bytecodes::_ifgt           : if_zero(intType   , If::gtr, smf_bcp); break;
+      case Bytecodes::_ifle           : if_zero(intType   , If::leq, smf_bcp); break;
+      case Bytecodes::_if_icmpeq      : if_same(intType   , If::eql, smf_bcp); break;
+      case Bytecodes::_if_icmpne      : if_same(intType   , If::neq, smf_bcp); break;
+      case Bytecodes::_if_icmplt      : if_same(intType   , If::lss, smf_bcp); break;
+      case Bytecodes::_if_icmpge      : if_same(intType   , If::geq, smf_bcp); break;
+      case Bytecodes::_if_icmpgt      : if_same(intType   , If::gtr, smf_bcp); break;
+      case Bytecodes::_if_icmple      : if_same(intType   , If::leq, smf_bcp); break;
+      case Bytecodes::_if_acmpeq      : if_same(objectType, If::eql, smf_bcp); break;
+      case Bytecodes::_if_acmpne      : if_same(objectType, If::neq, smf_bcp); break;
       case Bytecodes::_goto           : _goto(s.cur_bci(), s.get_dest()); break;
       case Bytecodes::_jsr            : jsr(s.get_dest()); break;
       case Bytecodes::_ret            : ret(s.get_index()); break;
-      case Bytecodes::_tableswitch    : table_switch(); break;
-      case Bytecodes::_lookupswitch   : lookup_switch(); break;
+      case Bytecodes::_tableswitch    : table_switch(smf_bcp); break;
+      case Bytecodes::_lookupswitch   : lookup_switch(smf_bcp); break;
       case Bytecodes::_ireturn        : method_return(ipop(), ignore_return); break;
       case Bytecodes::_lreturn        : method_return(lpop(), ignore_return); break;
       case Bytecodes::_freturn        : method_return(fpop(), ignore_return); break;
@@ -2883,8 +2943,8 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
       case Bytecodes::_monitorexit    : monitorexit (apop(), s.cur_bci()); break;
       case Bytecodes::_wide           : ShouldNotReachHere(); break;
       case Bytecodes::_multianewarray : new_multi_array(s.cur_bcp()[3]); break;
-      case Bytecodes::_ifnull         : if_null(objectType, If::eql); break;
-      case Bytecodes::_ifnonnull      : if_null(objectType, If::neq); break;
+      case Bytecodes::_ifnull         : if_null(objectType, If::eql, smf_bcp); break;
+      case Bytecodes::_ifnonnull      : if_null(objectType, If::neq, smf_bcp); break;
       case Bytecodes::_goto_w         : _goto(s.cur_bci(), s.get_far_dest()); break;
       case Bytecodes::_jsr_w          : jsr(s.get_far_dest()); break;
       case Bytecodes::_breakpoint     : BAILOUT_("concurrent setting of breakpoint", NULL);

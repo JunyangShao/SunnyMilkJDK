@@ -1978,6 +1978,10 @@ LEAF(If, BlockEnd)
   int         _profiled_bci; // Canonicalizer may alter bci of If node
   bool        _swapped;      // Is the order reversed with respect to the original If in the
                              // bytecode stream?
+  // SunnyMilkFuzzer - coverage observed
+  int       _smf_probe_status = 3;
+  address       _smf_bcp = NULL;
+  
  public:
   // creation
   // unordered_is_true is valid for float/double compares only
@@ -2033,6 +2037,12 @@ LEAF(If, BlockEnd)
   void set_swapped(bool value)                    { _swapped = value;         }
   // generic
   virtual void input_values_do(ValueVisitor* f)   { BlockEnd::input_values_do(f); f->visit(&_x); f->visit(&_y); }
+
+  // SunnyMilkFuzzer - coverage observed
+  void set_smf_probe_status(int value)      { _smf_probe_status = value; }
+  int smf_probe_status() const              { return _smf_probe_status; }
+  void set_smf_bcp(address value)      { _smf_bcp = value; }
+  address smf_bcp() const              { return _smf_bcp; }
 };
 
 
@@ -2093,6 +2103,9 @@ LEAF(IfInstanceOf, BlockEnd)
 BASE(Switch, BlockEnd)
  private:
   Value       _tag;
+  // SunnyMilkFuzzer - coverage observed
+  int       _smf_probe_status = 3;
+  address       _smf_bcp = NULL;
 
  public:
   // creation
@@ -2111,6 +2124,12 @@ BASE(Switch, BlockEnd)
 
   // generic
   virtual void input_values_do(ValueVisitor* f)   { BlockEnd::input_values_do(f); f->visit(&_tag); }
+
+  // SunnyMilkFuzzer - coverage observed
+  void set_smf_probe_status(int value)      { _smf_probe_status = value; }
+  int smf_probe_status() const              { return _smf_probe_status; }
+  void set_smf_bcp(address value)      { _smf_bcp = value; }
+  address smf_bcp() const              { return _smf_bcp; }
 };
 
 

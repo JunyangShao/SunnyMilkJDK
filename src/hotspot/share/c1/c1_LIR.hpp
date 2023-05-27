@@ -1412,6 +1412,10 @@ class LIR_OpBranch: public LIR_Op {
   BlockBegin*   _ublock; // if this is a float-branch, this is the unorderd block
   CodeStub*     _stub;   // if this is a branch to a stub, this is the stub
 
+  // SunnyMilkFuzzer - coveraged observed
+  int       _smf_probe_status = 3;
+  address       _smf_bcp = NULL;
+
  public:
   LIR_OpBranch(LIR_Condition cond, Label* lbl)
     : LIR_Op(lir_branch, LIR_OprFact::illegalOpr, (CodeEmitInfo*) NULL)
@@ -1436,6 +1440,12 @@ class LIR_OpBranch: public LIR_Op {
   void          change_block(BlockBegin* b);
   void          change_ublock(BlockBegin* b);
   void          negate_cond();
+
+  // SunnyMilkFuzzer - coveraged observed
+  void set_smf_probe_status(int value)      { _smf_probe_status = value; }
+  int smf_probe_status() const              { return _smf_probe_status; }
+  void set_smf_bcp(address value)      { _smf_bcp = value; }
+  address smf_bcp() const              { return _smf_bcp; }
 
   virtual void emit_code(LIR_Assembler* masm);
   virtual LIR_OpBranch* as_OpBranch() { return this; }
@@ -2186,26 +2196,45 @@ class LIR_List: public CompilationResourceObj {
   void allocate_array(LIR_Opr dst, LIR_Opr len, LIR_Opr t1,LIR_Opr t2, LIR_Opr t3,LIR_Opr t4, BasicType type, LIR_Opr klass, CodeStub* stub);
 
   // jump is an unconditional branch
-  void jump(BlockBegin* block) {
-    append(new LIR_OpBranch(lir_cond_always, block));
+  void jump(BlockBegin* block, int smf_probe_status = 3, address smf_bcp = NULL) {
+    LIR_OpBranch *op = new LIR_OpBranch(lir_cond_always, block);
+    op->set_smf_probe_status(smf_probe_status);
+    op->set_smf_bcp(smf_bcp);
+    append(op);
   }
-  void jump(CodeStub* stub) {
-    append(new LIR_OpBranch(lir_cond_always, stub));
+  void jump(CodeStub* stub, int smf_probe_status = 3, address smf_bcp = NULL) {
+    LIR_OpBranch *op = new LIR_OpBranch(lir_cond_always, stub);
+    op->set_smf_probe_status(smf_probe_status);
+    op->set_smf_bcp(smf_bcp);
+    append(op);
   }
-  void branch(LIR_Condition cond, Label* lbl) {
-    append(new LIR_OpBranch(cond, lbl));
+  // All `branch` changed for SunnyMilkFuzzer.
+  void branch(LIR_Condition cond, Label* lbl, int smf_probe_status = 3, address smf_bcp = NULL) {
+    LIR_OpBranch *op = new LIR_OpBranch(cond, lbl);
+    op->set_smf_probe_status(smf_probe_status);
+    op->set_smf_bcp(smf_bcp);
+    append(op);
   }
   // Should not be used for fp comparisons
-  void branch(LIR_Condition cond, BlockBegin* block) {
-    append(new LIR_OpBranch(cond, block));
+  void branch(LIR_Condition cond, BlockBegin* block, int smf_probe_status = 3, address smf_bcp = NULL) {
+    LIR_OpBranch *op = new LIR_OpBranch(cond, block);
+    op->set_smf_probe_status(smf_probe_status);
+    op->set_smf_bcp(smf_bcp);
+    append(op);
   }
   // Should not be used for fp comparisons
-  void branch(LIR_Condition cond, CodeStub* stub) {
-    append(new LIR_OpBranch(cond, stub));
+  void branch(LIR_Condition cond, CodeStub* stub, int smf_probe_status = 3, address smf_bcp = NULL) {
+    LIR_OpBranch *op = new LIR_OpBranch(cond, stub);
+    op->set_smf_probe_status(smf_probe_status);
+    op->set_smf_bcp(smf_bcp);
+    append(op);
   }
   // Should only be used for fp comparisons
-  void branch(LIR_Condition cond, BlockBegin* block, BlockBegin* unordered) {
-    append(new LIR_OpBranch(cond, block, unordered));
+  void branch(LIR_Condition cond, BlockBegin* block, BlockBegin* unordered, int smf_probe_status = 3, address smf_bcp = NULL) {
+    LIR_OpBranch *op = new LIR_OpBranch(cond, block, unordered);
+    op->set_smf_probe_status(smf_probe_status);
+    op->set_smf_bcp(smf_bcp);
+    append(op);
   }
 
   void shift_left(LIR_Opr value, LIR_Opr count, LIR_Opr dst, LIR_Opr tmp);

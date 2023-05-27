@@ -244,14 +244,16 @@ class GraphBuilder {
   void convert(Bytecodes::Code op, BasicType from, BasicType to);
   void increment();
   void _goto(int from_bci, int to_bci);
-  void if_node(Value x, If::Condition cond, Value y, ValueStack* stack_before);
-  void if_zero(ValueType* type, If::Condition cond);
-  void if_null(ValueType* type, If::Condition cond);
-  void if_same(ValueType* type, If::Condition cond);
+  // Modified for SunnyMilkFuzzer (if_*)
+  void if_node(Value x, If::Condition cond, Value y, ValueStack* stack_before, address smf_bcp);
+  void if_zero(ValueType* type, If::Condition cond, address smf_bcp);
+  void if_null(ValueType* type, If::Condition cond, address smf_bcp);
+  void if_same(ValueType* type, If::Condition cond, address smf_bcp);
   void jsr(int dest);
   void ret(int local_index);
-  void table_switch();
-  void lookup_switch();
+  // Modified for SunnyMilkFuzzer
+  void table_switch(address smf_bcp);
+  void lookup_switch(address smf_bcp);
   void method_return(Value x, bool ignore_return = false);
   void call_register_finalizer();
   void access_field(Bytecodes::Code code);
@@ -266,6 +268,10 @@ class GraphBuilder {
   void new_multi_array(int dimensions);
   void throw_op(int bci);
   Value round_fp(Value fp_value);
+
+  // SunnyMilkFuzzer - for branch-type node setting
+  If* if_node_smf(If* cur_if_node, address smf_bcp);
+  Switch* switch_node_smf(Switch* cur_switch_node, address smf_bcp);
 
   // stack/code manipulation helpers
   Instruction* append_with_bci(Instruction* instr, int bci);

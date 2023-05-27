@@ -1448,6 +1448,13 @@ void LIR_Assembler::emit_op3(LIR_Op3* op) {
   }
 }
 
+void LIR_Assembler::emit_smf_probe_helper(address smf_bcp) {
+  static constexpr uintptr_t SMFTableMaxSizeMask = 0xFFFF;
+  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() +
+    ((uintptr_t)smf_bcp & SMFTableMaxSizeMask), relocInfo::none));
+  __ incrementb(Address(rscratch1, 0));
+}
+
 void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
 #ifdef ASSERT
   assert(op->block() == NULL || op->block()->label() == op->label(), "wrong label");
@@ -1457,6 +1464,11 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
 
   if (op->cond() == lir_cond_always) {
     if (op->info() != NULL) add_debug_info_for_branch(op->info());
+    if (IsCurrentMethodInteresting() && op->smf_probe_status() == 2) {
+      // SunnyMilkFuzzer special case for probes in Switch
+      // For default case, the jump needs to be recorded.
+      emit_smf_probe_helper(op->smf_bcp());
+    }
     __ jmp (*(op->label()));
   } else {
     Assembler::Condition acond = Assembler::zero;
@@ -1514,10 +1526,8 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
         default:                         ShouldNotReachHere();
       }
     }
-    static uintptr_t br_counter = 0;
-    static constexpr uintptr_t SMFTableMaxSizeMask = 0xFFFF;
-    // SMF coverage - taken - begin
-    if (IsCurrentMethodInteresting()) {
+    // static uintptr_t br_counter = 0;
+    if (IsCurrentMethodInteresting() && op->smf_probe_status() == 0) {
       // Boolean flag solution.
       // __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
       // __ movb(Address(rscratch1, br_counter & SMFTableMaxSizeMask), 1);
@@ -1536,17 +1546,26 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
       // Please comment out the `__ jcc(acond,*(op->label()));` below when using this solution.
       Label not_taken;
       __ jcc(acond_rev, not_taken);
-      __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() + (br_counter++ & SMFTableMaxSizeMask), relocInfo::none));
-      __ incrementb(Address(rscratch1, 0));
+      emit_smf_probe_helper(op->smf_bcp());
       __ jmp(*(op->label()));
       __ bind(not_taken);
-      __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() + (br_counter++ & SMFTableMaxSizeMask), relocInfo::none));
-      __ incrementb(Address(rscratch1, 0));
+      emit_smf_probe_helper(op->smf_bcp() + 1);
+    } else if (IsCurrentMethodInteresting() && op->smf_probe_status() == 1) {
+      // taken exhausted
+      __ jcc(acond,*(op->label()));
+      emit_smf_probe_helper(op->smf_bcp() + 1);
+    } else if (IsCurrentMethodInteresting() && op->smf_probe_status() == 2) {
+      // not taken exhaused
+      Label not_taken;
+      __ jcc(acond_rev, not_taken);
+      emit_smf_probe_helper(op->smf_bcp());
+      __ jmp(*(op->label()));
+      __ bind(not_taken);
+    } else {
+      // all exhausted
+      __ jcc(acond,*(op->label()));
     }
-    // SMF coverage - taken - end
-    // __ jcc(acond,*(op->label()));
-    // SMF coverage - not taken - begin
-    if (IsCurrentMethodInteresting()) {
+    // if (IsCurrentMethodInteresting()) {
       // push and popf is too costly, we opt to not use it.
       // so as a workaround, we cancel the previous recorded taken branch here.
       
@@ -1565,9 +1584,7 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
       // __ lea(rscratch2, Address(rscratch2, 1));
       // __ movb(Address(rscratch1, br_counter++ & SMFTableMaxSizeMask), rscratch2);
       // __ pop(rscratch2);
-      
-    }
-    // SMF coverage - not taken - end
+    // }
   }
 }
 
