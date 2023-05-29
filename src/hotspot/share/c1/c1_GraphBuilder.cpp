@@ -1432,11 +1432,16 @@ void GraphBuilder::lookup_switch(address smf_bcp) {
 
 If* GraphBuilder::if_node_smf(If* cur_if_node, address smf_bcp) {
   if (cur_if_node != NULL && smf_bcp != NULL) {
-    static constexpr uintptr_t SMF_SIZE_MASK = 0xFFFF;
-    unsigned char smf_probe_1 = *(GetSunnyMilkFuzzerCoverage() + (((uintptr_t) smf_bcp) & SMF_SIZE_MASK));
-    unsigned char smf_probe_2 = *(GetSunnyMilkFuzzerCoverage() + (((uintptr_t) smf_bcp + 1) & SMF_SIZE_MASK));
+    static constexpr uintptr_t SMFTableMethodMask = 0xFF00;
+    static constexpr uintptr_t SMFTableBytecodeMask = 0x00FF;
+    uintptr_t smf_method_idx =
+      ((uintptr_t) method()->get_Method()->code_base()) & SMFTableMethodMask;
+    uintptr_t smf_probe_idx1 = ((uintptr_t)smf_bcp & SMFTableBytecodeMask);
+    uintptr_t smf_probe_idx2 = ((uintptr_t)(smf_bcp + 1) & SMFTableBytecodeMask);
+    unsigned char smf_probe_1 = *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_idx1);
+    unsigned char smf_probe_2 = *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_idx2);
     cur_if_node->set_smf_bcp(smf_bcp);
-    if (smf_probe_1 > 0 && smf_probe_2 > 0) {
+    if (smf_probe_1 > 128 && smf_probe_2 > 128) {
       // exhausted.
       cur_if_node->set_smf_probe_status(3);
     } else if (smf_probe_2 > 0) {
@@ -1452,14 +1457,21 @@ If* GraphBuilder::if_node_smf(If* cur_if_node, address smf_bcp) {
 
 Switch* GraphBuilder::switch_node_smf(Switch* cur_switch_node, address smf_bcp) {
   if (cur_switch_node != NULL && smf_bcp != NULL) {
-    static constexpr uintptr_t SMF_SIZE_MASK = 0xFFFF;
+    static constexpr uintptr_t SMFTableMethodMask = 0xFF00;
+    static constexpr uintptr_t SMFTableBytecodeMask = 0x00FF;
+    uintptr_t smf_method_idx =
+      ((uintptr_t)method()->get_Method()->code_base()) & SMFTableMethodMask;
+    uintptr_t smf_probe_default_idx =
+      ((uintptr_t)smf_bcp + cur_switch_node->length()) & SMFTableBytecodeMask;
     unsigned char smf_probe_default =
-      *(GetSunnyMilkFuzzerCoverage() + ((((uintptr_t) smf_bcp) + cur_switch_node->length()) & SMF_SIZE_MASK));
-    bool smf_probe_default_exhausted = smf_probe_default > 0;
+      *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_default_idx);
+    bool smf_probe_default_exhausted = smf_probe_default > 128;
     bool smf_probe_case_exhausted = false;
     for (int i = 0; i < cur_switch_node->length(); ++i) {
-      unsigned char smf_probe = *(GetSunnyMilkFuzzerCoverage() + ((((uintptr_t) smf_bcp) + i) & SMF_SIZE_MASK));
-      if (smf_probe > 0) {
+      uintptr_t smf_probe_idx =
+        ((uintptr_t)smf_bcp + i) & SMFTableBytecodeMask;
+      unsigned char smf_probe = *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_idx);
+      if (smf_probe > 128) {
         smf_probe_case_exhausted = true;
         break;
       }

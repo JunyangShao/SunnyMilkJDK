@@ -1449,9 +1449,13 @@ void LIR_Assembler::emit_op3(LIR_Op3* op) {
 }
 
 void LIR_Assembler::emit_smf_probe_helper(address smf_bcp) {
-  static constexpr uintptr_t SMFTableMaxSizeMask = 0xFFFF;
+  static constexpr uintptr_t SMFTableMethodMask = 0xFF00;
+  static constexpr uintptr_t SMFTableBytecodeMask = 0x00FF;
+  uintptr_t smf_method_idx =
+    ((uintptr_t)compilation()->method()->get_Method()->code_base()) & SMFTableMethodMask;
+  uintptr_t smf_probe_idx = ((uintptr_t)smf_bcp & SMFTableBytecodeMask);
   __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() +
-    ((uintptr_t)smf_bcp & SMFTableMaxSizeMask), relocInfo::none));
+    smf_probe_idx + smf_method_idx, relocInfo::none));
   __ incrementb(Address(rscratch1, 0));
 }
 

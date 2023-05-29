@@ -95,7 +95,8 @@
 
 // SunnyMilkFuzzer Coverage APIs and Initializations.
 size_t SMF_cnt = 0;
-unsigned char SMF_table[1 << 16];
+// Align with libFuzzer's coverage map page size.
+alignas(4096) unsigned char SMF_table[1 << 16];
 bool SMF_begin = false;
 unsigned char* GetSunnyMilkFuzzerCoverage() {
   return SMF_table;
