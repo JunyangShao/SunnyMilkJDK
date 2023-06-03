@@ -122,6 +122,7 @@ public:
 
   protected:
     // visitor functions
+    void do_SMFMethodStart (SMFMethodStart*  x);
     void do_Constant       (Constant*        x);
     void do_IfOp           (IfOp*            x);
     void do_LogicOp        (LogicOp*         x);

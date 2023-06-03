@@ -549,6 +549,7 @@ class LIRGenerator: public InstructionVisitor, public BlockClosure {
   // visitor functionality
   virtual void do_Phi            (Phi*             x);
   virtual void do_Local          (Local*           x);
+  virtual void do_SMFMethodStart (SMFMethodStart*  x);
   virtual void do_Constant       (Constant*        x);
   virtual void do_LoadField      (LoadField*       x);
   virtual void do_StoreField     (StoreField*      x);

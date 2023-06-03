@@ -1504,9 +1504,9 @@ void LIRGenerator::do_If(If* x) {
   move_to_phi(x->state());
   // `__ branch` and `__ jump` changed for SunnyMilkFuzzer.
   if (x->x()->type()->is_float_kind()) {
-    __ branch(lir_cond(cond), x->tsux(), x->usux(), x->smf_probe_status(), x->smf_bcp());
+    __ branch(lir_cond(cond), x->tsux(), x->usux(), x->smf_probe_status(), x->smf_bcp(), x->smf_method());
   } else {
-    __ branch(lir_cond(cond), x->tsux(), x->smf_probe_status(), x->smf_bcp());
+    __ branch(lir_cond(cond), x->tsux(), x->smf_probe_status(), x->smf_bcp(), x->smf_method());
   }
   assert(x->default_sux() == x->fsux(), "wrong destination above");
   __ jump(x->default_sux());

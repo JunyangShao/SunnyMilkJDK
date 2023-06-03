@@ -61,6 +61,11 @@ class GraphBuilder {
     // Expression stack depth at point where inline occurred
     int          _caller_stack_size;
 
+    // for SunnyMilkFuzzer
+    bool         _has_branch = false;
+    bool         _is_method_start = false;
+    SMFMethodStart* _smf_method_start = NULL;
+
     // The continuation point for the inline. Currently only used in
     // multi-block inlines, but eventually would like to use this for
     // all inlines for uniformity and simplicity; in this case would
@@ -134,6 +139,16 @@ class GraphBuilder {
 
     ciBytecodeStream* stream()                     { return _stream;            }
     void set_stream(ciBytecodeStream* stream)      { _stream = stream;          }
+
+    // for SunnyMilkFuzzer
+    bool has_branch() const                        { return _has_branch;        }
+    void set_has_branch()                          { _has_branch = true;        }
+    void unset_has_branch()                        { _has_branch = false;        }
+    bool is_method_start() const                      { return _is_method_start;      }
+    void unset_is_method_start()                      { _is_method_start = false;     }
+    void set_is_method_start()                        { _is_method_start = true;      }
+    void set_smf_method_start(SMFMethodStart* smf_method_start) { _smf_method_start = smf_method_start; }
+    SMFMethodStart* smf_method_start() const       { return _smf_method_start;  }
 
     intx max_inline_size() const                   { return _max_inline_size;   }
 

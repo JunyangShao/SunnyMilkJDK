@@ -48,6 +48,7 @@ typedef LIR_OprDesc* LIR_Opr;
 class Instruction;
 class   Phi;
 class   Local;
+class   SMFMethodStart;
 class   Constant;
 class   AccessField;
 class     LoadField;
@@ -160,6 +161,7 @@ class InstructionVisitor: public StackObj {
  public:
   virtual void do_Phi            (Phi*             x) = 0;
   virtual void do_Local          (Local*           x) = 0;
+  virtual void do_SMFMethodStart (SMFMethodStart*  x) = 0;
   virtual void do_Constant       (Constant*        x) = 0;
   virtual void do_LoadField      (LoadField*       x) = 0;
   virtual void do_StoreField     (StoreField*      x) = 0;
@@ -528,6 +530,8 @@ class Instruction: public CompilationResourceObj {
   virtual Instruction*      as_Instruction()     { return this; } // to satisfy HASHING1 macro
   virtual Phi*              as_Phi()             { return NULL; }
   virtual Local*            as_Local()           { return NULL; }
+  // for SunnyMilkFuzzer
+  virtual SMFMethodStart*   as_SMFMethodStart()  { return NULL; }
   virtual Constant*         as_Constant()        { return NULL; }
   virtual AccessField*      as_AccessField()     { return NULL; }
   virtual LoadField*        as_LoadField()       { return NULL; }
@@ -722,6 +726,21 @@ LEAF(Local, Instruction)
   virtual void input_values_do(ValueVisitor* f)   { /* no values */ }
 };
 
+// For SunnyMilkFuzzer...
+LEAF(SMFMethodStart, Instruction)
+  public:
+    SMFMethodStart()
+      : Instruction(NULL, NULL, true) {}
+    bool is_nontrivial() const { return _is_nontrivial; }
+    void set_is_nontrivial() { _is_nontrivial = true; }
+    void unset_is_nontrivial() { _is_nontrivial = false; }
+    void set_smf_method(address smf_method) { _smf_method = smf_method; }
+    address smf_method() const { return _smf_method; }
+    virtual void input_values_do(ValueVisitor* f)   { /* no values */ }
+  private:
+    bool _is_nontrivial = false;
+    address _smf_method = NULL;
+};
 
 LEAF(Constant, Instruction)
  public:
@@ -1981,6 +2000,7 @@ LEAF(If, BlockEnd)
   // SunnyMilkFuzzer - coverage observed
   int       _smf_probe_status = 3;
   address       _smf_bcp = NULL;
+  address       _smf_method = NULL;
   
  public:
   // creation
@@ -2043,6 +2063,8 @@ LEAF(If, BlockEnd)
   int smf_probe_status() const              { return _smf_probe_status; }
   void set_smf_bcp(address value)      { _smf_bcp = value; }
   address smf_bcp() const              { return _smf_bcp; }
+  void set_smf_method(address value)      { _smf_method = value; }
+  address smf_method() const              { return _smf_method; }
 };
 
 
@@ -2106,6 +2128,7 @@ BASE(Switch, BlockEnd)
   // SunnyMilkFuzzer - coverage observed
   int       _smf_probe_status = 3;
   address       _smf_bcp = NULL;
+  address       _smf_method = NULL;
 
  public:
   // creation
@@ -2130,6 +2153,8 @@ BASE(Switch, BlockEnd)
   int smf_probe_status() const              { return _smf_probe_status; }
   void set_smf_bcp(address value)      { _smf_bcp = value; }
   address smf_bcp() const              { return _smf_bcp; }
+  void set_smf_method(address value)      { _smf_method = value; }
+  address smf_method() const              { return _smf_method; }
 };
 
 

@@ -973,6 +973,9 @@ LIR_OpReturn::LIR_OpReturn(LIR_Opr opr) :
 
 //---------------------------------------------------
 
+void LIR_OpSMFMethodStart::emit_code(LIR_Assembler* masm) {
+  masm->emit_opSMFMethodStart(this);
+}
 
 void LIR_OpJavaCall::emit_code(LIR_Assembler* masm) {
   masm->emit_call(this);

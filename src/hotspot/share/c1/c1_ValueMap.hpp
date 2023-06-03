@@ -167,6 +167,7 @@ class ValueNumberingVisitor: public InstructionVisitor {
 
   void do_Phi            (Phi*             x) { /* nothing to do */ }
   void do_Local          (Local*           x) { /* nothing to do */ }
+  void do_SMFMethodStart (SMFMethodStart*  x) { /* nothing to do */ }
   void do_Constant       (Constant*        x) { /* nothing to do */ }
   void do_LoadField      (LoadField*       x) {
     if (x->is_init_point() ||         // getstatic is an initialization point so treat it as a wide kill

@@ -192,6 +192,7 @@ void Canonicalizer::do_Op2(Op2* x) {
 
 
 void Canonicalizer::do_Phi            (Phi*             x) {}
+void Canonicalizer::do_SMFMethodStart (SMFMethodStart*  x) {}
 void Canonicalizer::do_Constant       (Constant*        x) {}
 void Canonicalizer::do_Local          (Local*           x) {}
 void Canonicalizer::do_LoadField      (LoadField*       x) {}

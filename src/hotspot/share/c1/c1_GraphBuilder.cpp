@@ -1452,6 +1452,7 @@ If* GraphBuilder::if_node_smf(If* cur_if_node, address smf_bcp) {
       cur_if_node->set_smf_probe_status(0);
     }
   }
+  cur_if_node->set_smf_method(method()->get_Method()->bcp_from(0));
   return cur_if_node;
 }
 
@@ -1488,6 +1489,7 @@ Switch* GraphBuilder::switch_node_smf(Switch* cur_switch_node, address smf_bcp) 
       cur_switch_node->set_smf_probe_status(0);
     }
   }
+  cur_switch_node->set_smf_method(method()->get_Method()->bcp_from(0));
   return cur_switch_node;
 }
 
@@ -2755,6 +2757,14 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
     // SunnyMilkFuzzer - bytecode pointer
     address smf_bcp = method()->get_Method()->bcp_from(s.cur_bci());
 
+    if (scope_data()->is_method_start()) {
+      scope_data()->unset_is_method_start();
+      SMFMethodStart* smf_method_start = new SMFMethodStart();
+      smf_method_start->set_smf_method(method()->get_Method()->bcp_from(0));
+      append(smf_method_start);
+      scope_data()->set_smf_method_start(smf_method_start);
+    }
+
     // handle bytecode
     switch (code) {
       case Bytecodes::_nop            : /* nothing to do */ break;
@@ -2910,25 +2920,25 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
       case Bytecodes::_fcmpg          : compare_op(floatType , code); break;
       case Bytecodes::_dcmpl          : compare_op(doubleType, code); break;
       case Bytecodes::_dcmpg          : compare_op(doubleType, code); break;
-      case Bytecodes::_ifeq           : if_zero(intType   , If::eql, smf_bcp); break;
-      case Bytecodes::_ifne           : if_zero(intType   , If::neq, smf_bcp); break;
-      case Bytecodes::_iflt           : if_zero(intType   , If::lss, smf_bcp); break;
-      case Bytecodes::_ifge           : if_zero(intType   , If::geq, smf_bcp); break;
-      case Bytecodes::_ifgt           : if_zero(intType   , If::gtr, smf_bcp); break;
-      case Bytecodes::_ifle           : if_zero(intType   , If::leq, smf_bcp); break;
-      case Bytecodes::_if_icmpeq      : if_same(intType   , If::eql, smf_bcp); break;
-      case Bytecodes::_if_icmpne      : if_same(intType   , If::neq, smf_bcp); break;
-      case Bytecodes::_if_icmplt      : if_same(intType   , If::lss, smf_bcp); break;
-      case Bytecodes::_if_icmpge      : if_same(intType   , If::geq, smf_bcp); break;
-      case Bytecodes::_if_icmpgt      : if_same(intType   , If::gtr, smf_bcp); break;
-      case Bytecodes::_if_icmple      : if_same(intType   , If::leq, smf_bcp); break;
-      case Bytecodes::_if_acmpeq      : if_same(objectType, If::eql, smf_bcp); break;
-      case Bytecodes::_if_acmpne      : if_same(objectType, If::neq, smf_bcp); break;
+      case Bytecodes::_ifeq           : if_zero(intType   , If::eql, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_ifne           : if_zero(intType   , If::neq, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_iflt           : if_zero(intType   , If::lss, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_ifge           : if_zero(intType   , If::geq, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_ifgt           : if_zero(intType   , If::gtr, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_ifle           : if_zero(intType   , If::leq, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_if_icmpeq      : if_same(intType   , If::eql, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_if_icmpne      : if_same(intType   , If::neq, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_if_icmplt      : if_same(intType   , If::lss, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_if_icmpge      : if_same(intType   , If::geq, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_if_icmpgt      : if_same(intType   , If::gtr, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_if_icmple      : if_same(intType   , If::leq, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_if_acmpeq      : if_same(objectType, If::eql, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_if_acmpne      : if_same(objectType, If::neq, smf_bcp); scope_data()->set_has_branch(); break;
       case Bytecodes::_goto           : _goto(s.cur_bci(), s.get_dest()); break;
       case Bytecodes::_jsr            : jsr(s.get_dest()); break;
       case Bytecodes::_ret            : ret(s.get_index()); break;
-      case Bytecodes::_tableswitch    : table_switch(smf_bcp); break;
-      case Bytecodes::_lookupswitch   : lookup_switch(smf_bcp); break;
+      case Bytecodes::_tableswitch    : table_switch(smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_lookupswitch   : lookup_switch(smf_bcp); scope_data()->set_has_branch(); break;
       case Bytecodes::_ireturn        : method_return(ipop(), ignore_return); break;
       case Bytecodes::_lreturn        : method_return(lpop(), ignore_return); break;
       case Bytecodes::_freturn        : method_return(fpop(), ignore_return); break;
@@ -2955,8 +2965,8 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
       case Bytecodes::_monitorexit    : monitorexit (apop(), s.cur_bci()); break;
       case Bytecodes::_wide           : ShouldNotReachHere(); break;
       case Bytecodes::_multianewarray : new_multi_array(s.cur_bcp()[3]); break;
-      case Bytecodes::_ifnull         : if_null(objectType, If::eql, smf_bcp); break;
-      case Bytecodes::_ifnonnull      : if_null(objectType, If::neq, smf_bcp); break;
+      case Bytecodes::_ifnull         : if_null(objectType, If::eql, smf_bcp); scope_data()->set_has_branch(); break;
+      case Bytecodes::_ifnonnull      : if_null(objectType, If::neq, smf_bcp); scope_data()->set_has_branch(); break;
       case Bytecodes::_goto_w         : _goto(s.cur_bci(), s.get_far_dest()); break;
       case Bytecodes::_jsr_w          : jsr(s.get_far_dest()); break;
       case Bytecodes::_breakpoint     : BAILOUT_("concurrent setting of breakpoint", NULL);
@@ -3009,6 +3019,9 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
 
 
 void GraphBuilder::iterate_all_blocks(bool start_in_current_block_for_inlining) {
+  scope_data()->set_is_method_start();
+  scope_data()->set_smf_method_start(NULL);
+  scope_data()->unset_has_branch();
   do {
     if (start_in_current_block_for_inlining && !bailed_out()) {
       iterate_bytecodes_for_block(0);
@@ -3031,6 +3044,9 @@ void GraphBuilder::iterate_all_blocks(bool start_in_current_block_for_inlining) 
       }
     }
   } while (!bailed_out() && !scope_data()->is_work_list_empty());
+  if (!bailed_out() && scope_data()->has_branch() && scope_data()->smf_method_start() != NULL) {
+    scope_data()->smf_method_start()->set_is_nontrivial();
+  }
 }
 
 

@@ -1448,15 +1448,20 @@ void LIR_Assembler::emit_op3(LIR_Op3* op) {
   }
 }
 
-void LIR_Assembler::emit_smf_probe_helper(address smf_bcp) {
+void LIR_Assembler::emit_smf_probe_helper(address smf_bcp, address smf_method) {
   static constexpr uintptr_t SMFTableMethodMask = 0xFF00;
   static constexpr uintptr_t SMFTableBytecodeMask = 0x00FF;
-  uintptr_t smf_method_idx =
-    ((uintptr_t)compilation()->method()->get_Method()->code_base()) & SMFTableMethodMask;
-  uintptr_t smf_probe_idx = ((uintptr_t)smf_bcp & SMFTableBytecodeMask);
+  uintptr_t smf_method_idx = ((uintptr_t)smf_method & SMFTableMethodMask);
+  uintptr_t smf_probe_idx =  ((uintptr_t)smf_bcp & SMFTableBytecodeMask);
   __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() +
     smf_probe_idx + smf_method_idx, relocInfo::none));
   __ incrementb(Address(rscratch1, 0));
+}
+
+void LIR_Assembler::emit_opSMFMethodStart(LIR_OpSMFMethodStart* op) {
+  if (op->smf_method() != NULL) {
+    emit_smf_probe_helper(0, op->smf_method());
+  }
 }
 
 void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
@@ -1471,7 +1476,7 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
     if (IsCurrentMethodInteresting() && op->smf_probe_status() == 2) {
       // SunnyMilkFuzzer special case for probes in Switch
       // For default case, the jump needs to be recorded.
-      emit_smf_probe_helper(op->smf_bcp());
+      emit_smf_probe_helper(op->smf_bcp(), op->smf_method());
     }
     __ jmp (*(op->label()));
   } else {
@@ -1550,19 +1555,19 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
       // Please comment out the `__ jcc(acond,*(op->label()));` below when using this solution.
       Label not_taken;
       __ jcc(acond_rev, not_taken);
-      emit_smf_probe_helper(op->smf_bcp());
+      emit_smf_probe_helper(op->smf_bcp(), op->smf_method());
       __ jmp(*(op->label()));
       __ bind(not_taken);
-      emit_smf_probe_helper(op->smf_bcp() + 1);
+      emit_smf_probe_helper(op->smf_bcp() + 1, op->smf_method());
     } else if (IsCurrentMethodInteresting() && op->smf_probe_status() == 1) {
       // taken exhausted
       __ jcc(acond,*(op->label()));
-      emit_smf_probe_helper(op->smf_bcp() + 1);
+      emit_smf_probe_helper(op->smf_bcp() + 1, op->smf_method());
     } else if (IsCurrentMethodInteresting() && op->smf_probe_status() == 2) {
       // not taken exhaused
       Label not_taken;
       __ jcc(acond_rev, not_taken);
-      emit_smf_probe_helper(op->smf_bcp());
+      emit_smf_probe_helper(op->smf_bcp(), op->smf_method());
       __ jmp(*(op->label()));
       __ bind(not_taken);
     } else {

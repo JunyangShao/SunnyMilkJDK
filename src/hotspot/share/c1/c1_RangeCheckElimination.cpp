@@ -99,6 +99,8 @@ RangeCheckEliminator::RangeCheckEliminator(IR *ir) :
   );
 }
 
+void RangeCheckEliminator::Visitor::do_SMFMethodStart(SMFMethodStart *x) {}
+
 // Instruction specific work for some instructions
 // Constant
 void RangeCheckEliminator::Visitor::do_Constant(Constant *c) {

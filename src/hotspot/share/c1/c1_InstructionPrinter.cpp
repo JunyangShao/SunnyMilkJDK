@@ -357,6 +357,7 @@ void InstructionPrinter::do_Local(Local* x) {
   output()->print("local[index %d]", x->java_index());
 }
 
+void InstructionPrinter::do_SMFMethodStart(SMFMethodStart*  x) {}
 
 void InstructionPrinter::do_Constant(Constant* x) {
   ValueType* t = x->type();

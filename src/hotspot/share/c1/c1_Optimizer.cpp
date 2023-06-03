@@ -493,6 +493,7 @@ public:
 
   void do_Phi            (Phi*             x);
   void do_Local          (Local*           x);
+  void do_SMFMethodStart (SMFMethodStart*  x);
   void do_Constant       (Constant*        x);
   void do_LoadField      (LoadField*       x);
   void do_StoreField     (StoreField*      x);
@@ -679,6 +680,7 @@ class NullCheckEliminator: public ValueVisitor {
 // that in for safety, otherwise should think more about it.
 void NullCheckVisitor::do_Phi            (Phi*             x) { nce()->handle_Phi(x);      }
 void NullCheckVisitor::do_Local          (Local*           x) {}
+void NullCheckVisitor::do_SMFMethodStart (SMFMethodStart*  x) {}
 void NullCheckVisitor::do_Constant       (Constant*        x) { /* FIXME: handle object constants */ }
 void NullCheckVisitor::do_LoadField      (LoadField*       x) { nce()->handle_AccessField(x); }
 void NullCheckVisitor::do_StoreField     (StoreField*      x) { nce()->handle_AccessField(x); }
