@@ -773,6 +773,9 @@ void Canonicalizer::do_If(If* x) {
         else if (eql_sux == gtr_sux) { cond = If::geq; tsux = eql_sux; fsux = lss_sux; }
         else                         { ShouldNotReachHere();                           }
         If* canon = new If(cmp->x(), cond, nan_sux == tsux, cmp->y(), tsux, fsux, cmp->state_before(), x->is_safepoint());
+        canon->set_smf_bcp(x->smf_bcp());
+        canon->set_smf_method(x->smf_method());
+        canon->set_smf_probe_status(x->smf_probe_status());
         if (cmp->x() == cmp->y()) {
           do_If(canon);
         } else {
