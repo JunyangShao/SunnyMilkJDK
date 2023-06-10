@@ -666,11 +666,11 @@ void CompileBroker::compilation_init_phase1(Thread* THREAD) {
 #ifdef COMPILER2
   if (true JVMCI_ONLY( && !UseJVMCICompiler)) {
     if (_c2_count > 0) {
-      // _compilers[1] = new C2Compiler();
-      _compilers[1] = new Compiler();
+      _compilers[1] = new C2Compiler();
+      // _compilers[1] = new Compiler();
       // Register c2 first as c2 CompilerPhaseType idToPhase mapping is explicit.
       // idToPhase mapping for c2 is in opto/phasetype.hpp
-      // JFR_ONLY(register_jfr_phasetype_serializer(compiler_c2);)
+      JFR_ONLY(register_jfr_phasetype_serializer(compiler_c2);)
     }
   }
 #endif // COMPILER2
