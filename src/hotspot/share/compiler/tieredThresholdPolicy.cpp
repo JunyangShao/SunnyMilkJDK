@@ -336,7 +336,11 @@ CompLevel TieredThresholdPolicy::limit_level(CompLevel level) {
   }
   assert(verify_level(level), "Invalid compilation level %d", level);
   if (level <= TieredStopAtLevel) {
-    return level;
+    if (level == CompLevel_full_optimization) {
+      return CompLevel_simple;
+    } else {
+      return level;
+    }
   }
   // Some compilation levels are not valid depending on a compilation mode:
   // a) quick_only - levels 2,3,4 are invalid; levels -1,0,1 are valid;
