@@ -1467,13 +1467,13 @@ Switch* GraphBuilder::switch_node_smf(Switch* cur_switch_node, address smf_bcp) 
     unsigned char smf_probe_default =
       *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_default_idx);
     bool smf_probe_default_exhausted = smf_probe_default > 128;
-    bool smf_probe_case_exhausted = false;
+    bool smf_probe_case_exhausted = true;
     for (int i = 0; i < cur_switch_node->length(); ++i) {
       uintptr_t smf_probe_idx =
         ((uintptr_t)smf_bcp + i) & SMFTableBytecodeMask;
       unsigned char smf_probe = *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_idx);
-      if (smf_probe > 128) {
-        smf_probe_case_exhausted = true;
+      if (smf_probe <= 128) {
+        smf_probe_case_exhausted = false;
         break;
       }
     }
