@@ -81,6 +81,9 @@
 #include "runtime/signature.hpp"
 #include "runtime/thread.inline.hpp"
 #include "runtime/vmOperations.hpp"
+
+#include "runtime/mutexLocker.hpp"
+
 #include "services/memTracker.hpp"
 #include "services/runtimeService.hpp"
 #include "utilities/defaultStream.hpp"
@@ -94,12 +97,23 @@
 #endif
 
 // SunnyMilkFuzzer Coverage APIs and Initializations.
-size_t SMF_cnt = 0;
+#include <string.h>
+
+// Initial size 512... So we can enlarge SMF_table at most 11 times.
+size_t SMF_table_size = 1 << 9;
+// The first 4 bytes are actually used to store the size of the table.
+// This is just for the simplicity of the implementation for the jni side.
+// Assuming little-endianess!
+size_t SMF_table_valid_size = 4;
 // Align with libFuzzer's coverage map page size.
-alignas(4096) unsigned char SMF_table[1 << 16];
+alignas(4096) unsigned char SMF_table[1 << 20] = { 0x00, 0x02, 0x00, 0x00 };
 bool SMF_begin = false;
 unsigned char* GetSunnyMilkFuzzerCoverage() {
   return SMF_table;
+}
+
+size_t GetSunnyMilkFuzzerCoverageSize() {
+  return SMF_table_size;
 }
 
 void SetSMFBegin() {
@@ -111,11 +125,11 @@ void UnsetSMFBegin() {
 }
 
 void ClearSMFTable() {
-  memset(SMF_table, 0, (1 << 16) * sizeof(unsigned char));
+  memset(SMF_table, 0, SMF_table_size * sizeof(unsigned char));
 }
 
 void SMF_default_tracer(uintptr_t bcp) {
-  constexpr size_t SMF_sizemask = (1 << 16) - 1;
+  constexpr size_t SMF_sizemask = SMF_table_size - 1;
   if (SMF_begin) {
     // size_t offset = ((bcp_before << 5) | bcp_disp) & SMF_sizemask;
     SMF_table[bcp & SMF_sizemask] = 1;
@@ -125,7 +139,103 @@ void SMF_default_tracer(uintptr_t bcp) {
 void (*SMF_tracer_ptr)(uintptr_t) = SMF_default_tracer;
 
 void SetSMFTracer(void (*tracer)(uintptr_t)) {
-    SMF_tracer_ptr = tracer;
+  SMF_tracer_ptr = tracer;
+}
+
+void (*SMFTableEnlarge)() = NULL;
+
+void SetSMFTableEnlarge(void (*enlarge)()) {
+  SMFTableEnlarge = enlarge;
+}
+
+#define SMF_METHOD_COV_TABLE_SIZE 65536
+#define SMF_METHOD_COV_TABLE_SIZE_MASK 0xFFFF
+#define SMF_NAME_MAX_LENGTH 256
+
+struct SMFMethodCovTableEntry {
+    char klass_name[SMF_NAME_MAX_LENGTH] = {0};
+    char method_name[SMF_NAME_MAX_LENGTH] = {0};
+    int cov_tbl_size = 0;
+    int offset_in_SMF_table = 0;
+    bool in_use = false; // Indicates whether this slot is occupied
+};
+
+// At max support 65536 methods, if larger than this, the coverage for those methods will be gone.
+struct SMFMethodCovTableEntry SMF_method_cov_table[SMF_METHOD_COV_TABLE_SIZE];
+int SMF_method_cov_table_valid_size = 0;
+
+int SMFHash(const char* klass_name, const char* method_name, size_t klass_name_len, size_t method_name_len) {
+  int hash = 0;
+
+  for (int i = 0; i < klass_name_len; i++) {
+      hash += method_name_len[i];
+  }
+  for (int i = 0; i < method_name_len; i++) {
+      hash += klass_name_len[i];
+  }
+
+  return hash & SMF_METHOD_COV_TABLE_SIZE_MASK;
+}
+
+// get or insert a method into the method coverage table, with a size 
+// return the offset in the SMF_table.
+int SMFMethodCovTableGetOrInsert(const char* klass_name, const char* method_name,
+                              size_t klass_name_len, size_t method_name_len,
+                              int cov_tbl_size) {
+  klass_name_len = klass_name_len < SMF_NAME_MAX_LENGTH ? klass_name_len : SMF_NAME_MAX_LENGTH;
+  method_name_len = method_name_len < SMF_NAME_MAX_LENGTH ? method_name_len : SMF_NAME_MAX_LENGTH;
+  cov_tbl_size = (7 + cov_tbl_size) & ~7; // Align with 8
+  int index = SMFHash(klass_name, method_name, klass_name_len, method_name_len);
+
+  // Lock the table operations.
+  MutexLocker smf_lock(SunnyMilkFuzzer_lock, Mutex::_no_safepoint_check_flag);
+
+  SMF_method_cov_table_valid_size++;
+  
+  int start_index = index;
+  // search status: 0 - not found, 1 - found empty slot, 2 - found existing slot
+  int search_status = 0;
+  do {
+    if (!SMF_method_cov_table[index].in_use) {
+      search_status = 1;
+      break;
+    } else if (memcmp(SMF_method_cov_table[index].klass_name, klass_name,
+        klass_name_len) == 0 && memcmp(SMF_method_cov_table[index].method_name, method_name_len) == 0) {
+      search_status = 2;
+      break;
+    } else {
+      // If a collision occurs, search for the next available slot
+      index = (index + 1) & SMF_METHOD_COV_TABLE_SIZE_MASK;
+    }
+  } while (index != start_index);
+
+  if (search_status == 2) {
+    // Set the SMF_method_cov_table
+    memcpy(SMF_method_cov_table[index].klass_name, klass_name, klass_name_len);
+    memcpy(SMF_method_cov_table[index].method_name, method_name, method_name_len);
+    SMF_method_cov_table[index].cov_tbl_size = cov_tbl_size;
+    SMF_method_cov_table[index].offset_in_SMF_table = SMF_table_valid_size;
+    SMF_method_cov_table[index].inUse = true;
+
+    // Set the SMF_table
+    // **** important **** Assuming 2 * sizeof(int) == 8 == sizeof(uintptr_t)!
+    memcpy(&SMF_table[SMF_table_valid_size + sizeof(int)], &cov_tbl_size, sizeof(int));
+    SMF_table_valid_size += cov_tbl_size + 2 * sizeof(int);
+    if (SMF_table_valid_size >= SMF_table_size) {
+      SMF_table_size <<= 1;
+      // copy this to the table beginning too.
+      memcpy(&SMF_table[0], &SMF_table_size, sizeof(int));
+      if (SMFTableEnlarge != NULL) {
+        SMFTableEnlarge();
+      }
+    }
+    return SMF_method_cov_table[index].offset_in_SMF_table;
+  } else if (search_status == 1) {
+    return SMF_method_cov_table[index].offset_in_SMF_table;
+  } else {
+    // SMF_method_cov_table is full, return -1
+    return -1;
+  }
 }
 
 static jint CurrentVersion = JNI_VERSION_10;

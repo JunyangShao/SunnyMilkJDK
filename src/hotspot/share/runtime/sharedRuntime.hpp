@@ -42,6 +42,7 @@ class vframeStream;
 extern void (*SMF_tracer_ptr)(uintptr_t);
 void SMF_tracer(void* thread, uintptr_t bcp);
 extern unsigned char* GetSunnyMilkFuzzerCoverage();
+extern size_t GetSunnyMilkFuzzerCoverageSize();
 
 // Runtime is the base class for various runtime interfaces
 // (InterpreterRuntime, CompilerRuntime, etc.). It provides

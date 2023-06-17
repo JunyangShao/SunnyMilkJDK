@@ -31,6 +31,8 @@
 
 // Mutexes used in the VM.
 
+extern Mutex*   SunnyMilkFuzzer_lock;            // a lock used to guard the SMF fuzzer method map operations.
+
 extern Mutex*   Patching_lock;                   // a lock used to guard code patching of compiled code
 extern Mutex*   CompiledMethod_lock;             // a lock used to guard a compiled method and OSR queues
 extern Monitor* SystemDictionary_lock;           // a lock on the system dictionary

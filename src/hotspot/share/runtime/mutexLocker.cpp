@@ -38,6 +38,8 @@
 // eliminating the indirection and using instances instead.
 // Consider using GCC's __read_mostly.
 
+Mutex*   SunnyMilkFuzzer_lock                = NULL;
+
 Mutex*   Patching_lock                = NULL;
 Mutex*   CompiledMethod_lock          = NULL;
 Monitor* SystemDictionary_lock        = NULL;
@@ -244,6 +246,8 @@ void mutex_init() {
 
   def(MetaspaceExpand_lock         , PaddedMutex  , leaf-1,      true,  _safepoint_check_never);
   def(ClassLoaderDataGraph_lock    , PaddedMutex  , nonleaf,     false, _safepoint_check_always);
+
+  def(SunnyMilkFuzzer_lock         , PaddedMutex  , native,      true,  _safepoint_check_never);      // used for SunnyMilkFuzzer.
 
   def(Patching_lock                , PaddedMutex  , special,     true,  _safepoint_check_never);      // used for safepointing and code patching.
   def(CompiledMethod_lock          , PaddedMutex  , special-1,   true,  _safepoint_check_never);
