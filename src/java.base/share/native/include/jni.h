@@ -782,6 +782,8 @@ struct JNINativeInterface_ {
     void (* ClearSMFTable)();
 
     void (* SetSMFTracer)(void (*)(uintptr_t));
+    
+    void (* SetSMFTableEnlarge)(void (*)(int));
 };
 
 /*
@@ -1899,6 +1901,10 @@ struct JNIEnv_ {
 
     void SetSMFTracer(void (*tracer)(uintptr_t)) {
       return functions->SetSMFTracer(tracer);
+    }
+
+    void SetSMFTableEnlarge(void (*enlarger)(int)) {
+      return functions->SetSMFTableEnlarge(enlarger);
     }
 
 #endif /* __cplusplus */

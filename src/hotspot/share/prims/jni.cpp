@@ -3738,7 +3738,9 @@ struct JNINativeInterface_ jni_NativeInterface = {
     
     ClearSMFTable,
 
-    SetSMFTracer
+    SetSMFTracer,
+    
+    SetSMFTableEnlarge
 };
 
 
