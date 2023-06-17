@@ -120,6 +120,115 @@ Method::Method(ConstMethod* xconst, AccessFlags access_flags) {
   NOT_PRODUCT(set_compiled_invocation_count(0);)
 }
 
+// SunnyMilkFuzzer related stuff.
+void Method::check_SMF_method_cov_initialized() {
+  if (offset_in_SMF_table == -1) {
+    char* klass_name = NULL;
+    char* method_name = NULL;
+    if (method_holder() != NULL && method_holder()->name() != NULL) {
+      klass_name = method_holder()->name()->as_C_string();
+    }
+    if (constants() != NULL && name() != NULL) {
+      method_name = name()->as_C_string();
+    }
+    if (klass_name != NULL && method_name != NULL) {
+      BytecodeStream bcs(methodHandle(Thread::current(), this));
+      Bytecodes::Code bc;
+      // **** Imporatant ****
+      // Assuming the method at most has 65536 branches.
+      // Use a temporary array to store the bcis.
+      static constexpr int kMaxBranches = 1 << 16;
+      int bcis[kMaxBranches];
+      int bc_count = 0;
+
+      while ((bc = bcs.next()) >= 0 && bc_count < (kMaxBranches)) {
+        switch (bc) {
+          case Bytecodes::_ifeq:
+          case Bytecodes::_ifnull:
+          case Bytecodes::_iflt:
+          case Bytecodes::_ifle:
+          case Bytecodes::_ifne:
+          case Bytecodes::_ifnonnull:
+          case Bytecodes::_ifgt:
+          case Bytecodes::_ifge:
+          case Bytecodes::_if_icmpeq:
+          case Bytecodes::_if_icmpne:
+          case Bytecodes::_if_icmplt:
+          case Bytecodes::_if_icmpgt:
+          case Bytecodes::_if_icmple:
+          case Bytecodes::_if_icmpge:
+          case Bytecodes::_if_acmpeq:
+          case Bytecodes::_if_acmpne:
+            // each normal branch has two 8-bit counters.
+            bci[SMF_method_cov_table_size] = bc_count;
+            bci[SMF_method_cov_table_size + 1] = bc_count;
+            SMF_method_cov_table_size += 2;
+
+          case Bytecodes::_lookupswitch: {
+            Bytecode_lookupswitch lookupswitch(this, bcs.bcp());
+            // each lookupswitch has 1 + number_of_pairs 8-bit counters.
+            for (int i = 0; i < lookupswitch.number_of_pairs() + 1; ++i) {
+              bci[SMF_method_cov_table_size] = bc_count;
+              SMF_method_cov_table_size++;
+            }
+            break;
+          }
+          case Bytecodes::_tableswitch: {
+            Bytecode_tableswitch tableswitch(this, bcs.bcp());
+            for (int i = 0; i < tableswitch.length(); ++i) {
+              bci[SMF_method_cov_table_size] = bc_count;
+              SMF_method_cov_table_size++;
+            }
+          }
+          default:
+            break;
+        }
+        bc_count++;
+      }
+      if (SMF_method_cov_table_size == 0) {
+        // Set it to be 0 to indicate that this method has been checked.
+        // Since its size is also 0, it will not have any impact for
+        // find_SMF_table_offset_from_bci/bcp. The method is effectively nullified.
+        offset_in_SMF_table = 0;
+      }
+      offset_in_SMF_table = SMFMethodCovTableGetOrInsert(klass_name, method_name,
+        strlen(klass_name), strlen(method_name), SMF_method_cov_table_size);
+      if (offset_in_SMF_table == -1) {
+        // The table is full. nullify this method.
+        offset_in_SMF_table = 0;
+        SMF_method_cov_table_size = 0;
+      }
+    }
+  }
+}
+
+int Method::find_SMF_table_offset_from_bci(int bci) {
+  int result = -1;
+  if (offset_in_SMF_table != -1 && SMF_method_cov_table_size != 0) {
+    // binary search in SMF_table_branch_bcis.
+    int *SMF_table_branch_bcis = GetSunnyMilkFuzzerBranchBCIs() + 2; // skip the header.
+    int low = 0;
+    int high = SMF_method_cov_table_size;
+    while (low < high) {
+      int mid = low + (high - low) / 2;
+      if (SMF_table_branch_bcis[mid] == bci) {
+        result = mid;
+        high = mid;
+      }
+      else if (SMF_table_branch_bcis[mid] < bci)
+        low = mid + 1;
+      else
+        high = mid;
+    }
+  }
+  return result;
+}
+
+int Method::find_SMF_table_offset_from_bcp(address bcp) {
+  int bci = bci_from(bcp);
+  return find_SMF_table_offset_from_bci(bci);
+}
+
 // Release Method*.  The nmethod will be gone when we get here because
 // we've walked the code cache.
 void Method::deallocate_contents(ClassLoaderData* loader_data) {

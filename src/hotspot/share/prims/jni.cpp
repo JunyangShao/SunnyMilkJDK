@@ -101,15 +101,22 @@
 
 // Initial size 512... So we can enlarge SMF_table at most 11 times.
 size_t SMF_table_size = 1 << 9;
-// The first 4 bytes are actually used to store the size of the table.
-// This is just for the simplicity of the implementation for the jni side.
-// Assuming little-endianess!
-size_t SMF_table_valid_size = 4;
+size_t SMF_table_valid_size = 0;
+// The actual "flat" coverage map for libFuzzer.
 // Align with libFuzzer's coverage map page size.
-alignas(4096) unsigned char SMF_table[1 << 20] = { 0x00, 0x02, 0x00, 0x00 };
+alignas(4096) unsigned char SMF_table[1 << 20] = {0};
+// Another peripheral table to store the branch bcis ->
+// For an index `x`, SMF_table[x] is the 8-bit counter for a bci, read by libFuzzer.
+// SMF_table_branch_bcis[x] is the bci for the corresponding branch in the method.
+// It will be used by the interpreter and JIT compiler to locate the 8bit counter.
+int SMF_table_branch_bcis[1 << 20] = {0};
 bool SMF_begin = false;
 unsigned char* GetSunnyMilkFuzzerCoverage() {
   return SMF_table;
+}
+
+int* GetSunnyMilkFuzzerBranchBCIs() {
+  return SMF_table_branch_bcis;
 }
 
 size_t GetSunnyMilkFuzzerCoverageSize() {
@@ -142,9 +149,9 @@ void SetSMFTracer(void (*tracer)(uintptr_t)) {
   SMF_tracer_ptr = tracer;
 }
 
-void (*SMFTableEnlarge)() = NULL;
+void (*SMFTableEnlarge)(int) = NULL;
 
-void SetSMFTableEnlarge(void (*enlarge)()) {
+void SetSMFTableEnlarge(void (*enlarge)(int)) {
   SMFTableEnlarge = enlarge;
 }
 
@@ -217,16 +224,17 @@ int SMFMethodCovTableGetOrInsert(const char* klass_name, const char* method_name
     SMF_method_cov_table[index].offset_in_SMF_table = SMF_table_valid_size;
     SMF_method_cov_table[index].inUse = true;
 
-    // Set the SMF_table
+    // Set the SMF_table sizes
     // **** important **** Assuming 2 * sizeof(int) == 8 == sizeof(uintptr_t)!
-    memcpy(&SMF_table[SMF_table_valid_size + sizeof(int)], &cov_tbl_size, sizeof(int));
+    // The first 8 bytes are the method header: 1st byte - hit flag; 4th~8th bytes - size.
+
+    // No need to set the SMF_table here, because libFuzzer will erase it after every iteration.
+    // Instead we should let the instrumented code writes it back to the table.
     SMF_table_valid_size += cov_tbl_size + 2 * sizeof(int);
     if (SMF_table_valid_size >= SMF_table_size) {
       SMF_table_size <<= 1;
-      // copy this to the table beginning too.
-      memcpy(&SMF_table[0], &SMF_table_size, sizeof(int));
       if (SMFTableEnlarge != NULL) {
-        SMFTableEnlarge();
+        SMFTableEnlarge(SMF_table_size);
       }
     }
     return SMF_method_cov_table[index].offset_in_SMF_table;
