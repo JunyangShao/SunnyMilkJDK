@@ -39,8 +39,8 @@ class AdapterFingerPrint;
 class vframeStream;
 
 // SunnyMilkFuzzer Coverage Information
-extern void (*SMF_tracer_ptr)(uintptr_t);
-void SMF_tracer(void* thread, uintptr_t bcp);
+extern void (*SMF_tracer_ptr)(uintptr_t, uintptr_t);
+void SMF_tracer(void* thread, uintptr_t method, uintptr_t bcp);
 extern unsigned char* GetSunnyMilkFuzzerCoverage();
 extern int* GetSunnyMilkFuzzerBranchBCIs();
 extern int SMFMethodCovTableGetOrInsert(const char* klass_name, const char* method_name,

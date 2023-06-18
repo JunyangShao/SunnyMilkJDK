@@ -135,17 +135,20 @@ void ClearSMFTable() {
   memset(SMF_table, 0, SMF_table_size * sizeof(unsigned char));
 }
 
-void SMF_default_tracer(uintptr_t bcp) {
-  constexpr size_t SMF_sizemask = SMF_table_size - 1;
+void SMF_default_tracer(uintptr_t method_ptr, uintptr_t bcp) {
+  bcp += offset;
+  Method* method = reinterpret_cast<Method*>(method_ptr);
   if (SMF_begin) {
-    // size_t offset = ((bcp_before << 5) | bcp_disp) & SMF_sizemask;
-    SMF_table[bcp & SMF_sizemask] = 1;
-    // printf("bcp = %ld, masked = %ld\n", bcp, bcp & SMF_sizemask);
+    method->check_SMF_method_cov_initialized();
+    int offset_in_SMF_table = method->find_SMF_table_offset_from_bcp(reinterpret_cast<address>(bcp));
+    if (offset_in_SMF_table != -1) {
+      SMF_table[offset_in_SMF_table]++;
+    }
   }
 }
-void (*SMF_tracer_ptr)(uintptr_t) = SMF_default_tracer;
+void (*SMF_tracer_ptr)(uintptr_t, uintptr_t) = SMF_default_tracer;
 
-void SetSMFTracer(void (*tracer)(uintptr_t)) {
+void SetSMFTracer(void (*tracer)(uintptr_t, uintptr_t)) {
   SMF_tracer_ptr = tracer;
 }
 

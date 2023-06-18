@@ -1558,22 +1558,29 @@ void InterpreterMacroAssembler::update_mdp_for_ret(Register return_bci) {
   pop(return_bci);
 }
 
-static constexpr uintptr_t SMFTableMethodMask = 0xFF00;
-static constexpr uintptr_t SMFTableBytecodeMask = 0x00FF;
+// static constexpr uintptr_t SMFTableMethodMask = 0xFF00;
+// static constexpr uintptr_t SMFTableBytecodeMask = 0x00FF;
 // SunnyMilkFuzzer - ported from templateTable_x86.cpp
 static const Register rbcp_smf     = LP64_ONLY(r13) NOT_LP64(rsi);
 void InterpreterMacroAssembler::profile_taken_branch(Register mdp,
                                                      Register bumped_count) {
   // SunnyMilkFuzzer save coverage
   // using `incrementb`. rcx is already holding Method* given its caller is always `branch`.
-  movl(rscratch2, rbcp_smf);
-  andl(rscratch2, SMFTableBytecodeMask);
-  movptr(rscratch1, Address(rcx, Method::const_offset()));
-  lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
-  andptr(rscratch1, SMFTableMethodMask);
-  addptr(rscratch2, rscratch1);
-  lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
-  incrementb(Address(rscratch1, rscratch2, Address::times_1));
+  // movl(rscratch2, rbcp_smf);
+  // andl(rscratch2, SMFTableBytecodeMask);
+  // movptr(rscratch1, Address(rcx, Method::const_offset()));
+  // lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
+  // andptr(rscratch1, SMFTableMethodMask);
+  // addptr(rscratch2, rscratch1);
+  // lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  // incrementb(Address(rscratch1, rscratch2, Address::times_1));
+
+  // SunnyMilkFuzzer save coverage
+  // rcx is already holding Method* given its caller is always `branch`. We need to save it
+  // and restore it later. we don't need to save callee-saved registers like rbcp or rbx.
+  push(rcx);
+  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rcx, rbcp_smf);
+  pop(rcx);
   
   if (ProfileInterpreter) {
     Label profile_continue;
@@ -1603,16 +1610,22 @@ void InterpreterMacroAssembler::profile_taken_branch(Register mdp,
 void InterpreterMacroAssembler::profile_not_taken_branch(Register mdp) {
   // SunnyMilkFuzzer save coverage
   // using `incrementb`.
-  get_method(rcx);
+  // get_method(rcx);
+  // movl(rscratch2, rbcp_smf);
+  // incrementl(rscratch2);
+  // andl(rscratch2, SMFTableBytecodeMask);
+  // movptr(rscratch1, Address(rcx, Method::const_offset()));
+  // lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
+  // andptr(rscratch1, SMFTableMethodMask);
+  // addptr(rscratch2, rscratch1);
+  // lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  // incrementb(Address(rscratch1, rscratch2, Address::times_1));
+
+  // SunnyMilkFuzzer save coverage
+  get_method(rscratch1);
   movl(rscratch2, rbcp_smf);
   incrementl(rscratch2);
-  andl(rscratch2, SMFTableBytecodeMask);
-  movptr(rscratch1, Address(rcx, Method::const_offset()));
-  lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
-  andptr(rscratch1, SMFTableMethodMask);
-  addptr(rscratch2, rscratch1);
-  lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
-  incrementb(Address(rscratch1, rscratch2, Address::times_1));
+  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rscratch1, rscratch2);
 
   if (ProfileInterpreter) {
     Label profile_continue;
@@ -1953,16 +1966,25 @@ void InterpreterMacroAssembler::profile_switch_default(Register mdp) {
   // SunnyMilkFuzzer save coverage
   // When coming in, mdp should have contained the SMF table index.
   // mdp is free to used given the code below.
-  movl(rscratch2, rbcp_smf);
-  addl(rscratch2, mdp);
-  andl(rscratch2, SMFTableBytecodeMask);
-  get_method(mdp);
-  movptr(rscratch1, Address(mdp, Method::const_offset()));
-  lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
-  andptr(rscratch1, SMFTableMethodMask);
-  addptr(rscratch2, rscratch1);
-  lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
-  incrementb(Address(rscratch1, rscratch2, Address::times_1));
+  // movl(rscratch2, rbcp_smf);
+  // addl(rscratch2, mdp);
+  // andl(rscratch2, SMFTableBytecodeMask);
+  // get_method(mdp);
+  // movptr(rscratch1, Address(mdp, Method::const_offset()));
+  // lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
+  // andptr(rscratch1, SMFTableMethodMask);
+  // addptr(rscratch2, rscratch1);
+  // lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  // incrementb(Address(rscratch1, rscratch2, Address::times_1));
+  
+  // SunnyMilkFuzzer save coverage
+  // rbx would be used later in the tableswitch/linearlookupswitch/binarylookupswitch,
+  // but since it's callee-saved,
+  // we don't need to save it here.
+  movl(rscratch1, rbcp_smf);
+  addl(rscratch1, mdp);
+  get_method(rscratch2);
+  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rscratch1, rscratch2);
 
   if (ProfileInterpreter) {
     Label profile_continue;
@@ -1989,16 +2011,27 @@ void InterpreterMacroAssembler::profile_switch_case(Register index,
                                                     Register reg2) {
   // SunnyMilkFuzzer save coverage
   // reg2 is free to used given the code below.
+  // get_method(reg2);
+  // movl(rscratch2, rbcp_smf);
+  // addl(rscratch2, index);
+  // andl(rscratch2, SMFTableBytecodeMask);
+  // movptr(rscratch1, Address(reg2, Method::const_offset()));
+  // lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
+  // andptr(rscratch1, SMFTableMethodMask);
+  // addptr(rscratch2, rscratch1);
+  // lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  // incrementb(Address(rscratch1, rscratch2, Address::times_1));
+
+  // SunnyMilkFuzzer save coverage
+  // rdx would be used later in the tableswitch/linearlookupswitch/binarylookupswitch,
+  // save it.
   get_method(reg2);
   movl(rscratch2, rbcp_smf);
   addl(rscratch2, index);
-  andl(rscratch2, SMFTableBytecodeMask);
-  movptr(rscratch1, Address(reg2, Method::const_offset()));
-  lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
-  andptr(rscratch1, SMFTableMethodMask);
-  addptr(rscratch2, rscratch1);
-  lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
-  incrementb(Address(rscratch1, rscratch2, Address::times_1));
+  movl(index, rscratch2);
+  push(rdx);
+  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), reg2, index);
+  pop(rdx);
 
   if (ProfileInterpreter) {
     Label profile_continue;
