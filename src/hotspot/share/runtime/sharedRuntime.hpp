@@ -43,7 +43,8 @@ extern void (*SMF_tracer_ptr)(uintptr_t, uintptr_t);
 void SMF_tracer(void* thread, uintptr_t method, uintptr_t bcp);
 extern unsigned char* GetSunnyMilkFuzzerCoverage();
 extern int* GetSunnyMilkFuzzerBranchBCIs();
-extern int SMFMethodCovTableGetOrInsert(const char* klass_name, const char* method_name,
+extern unsigned long long SMFMethodCovTableGetOrInsert
+                              (const char* klass_name, const char* method_name,
                               size_t klass_name_len, size_t method_name_len,
                               int cov_tbl_size);
 

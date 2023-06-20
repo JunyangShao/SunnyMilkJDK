@@ -84,6 +84,7 @@ class Method : public Metadata {
   // SunnyMilkFuzzer - the offset of the states in SMF_table and SMF_table_branch_bcis.
   // When it's -1, it indicates it's not initialized yet or is not a SMF-instrumentable method.
   int offset_in_SMF_table = -1;
+  int offset_in_SMF_method_cov_hit_table = -1;
   // The size of the method in SMF_method_cov_table.
   int SMF_method_cov_table_size = 0;
 

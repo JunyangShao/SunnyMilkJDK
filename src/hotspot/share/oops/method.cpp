@@ -191,11 +191,15 @@ void Method::check_SMF_method_cov_initialized() {
         // find_SMF_table_offset_from_bci/bcp. The method is effectively nullified.
         offset_in_SMF_table = 0;
       }
-      offset_in_SMF_table = SMFMethodCovTableGetOrInsert(klass_name, method_name,
+      unsigned long long encoded_ret = 
+        SMFMethodCovTableGetOrInsert(klass_name, method_name,
         strlen(klass_name), strlen(method_name), SMF_method_cov_table_size);
+      offset_in_SMF_table = (int) (encoded_ret >> 32);
+      offset_in_SMF_method_cov_hit_table = (int) (encoded_ret);
       if (offset_in_SMF_table == -1) {
         // The table is full. nullify this method.
         offset_in_SMF_table = 0;
+        offset_in_SMF_method_cov_hit_table = 0;
         SMF_method_cov_table_size = 0;
       }
     }

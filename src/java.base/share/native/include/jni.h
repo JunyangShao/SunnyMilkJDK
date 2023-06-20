@@ -784,6 +784,12 @@ struct JNINativeInterface_ {
     void (* SetSMFTracer)(void (*)(uintptr_t, uintptr_t));
     
     void (* SetSMFTableEnlarge)(void (*)(int));
+
+    int* (* GetSunnyMilkFuzzerMethodSizeTable)();
+
+    unsigned char* (* GetSunnyMilkFuzzerMethodHitTable)();
+
+    int (* GetSunnyMilkFuzzerMethodNumber)();
 };
 
 /*
@@ -1905,6 +1911,18 @@ struct JNIEnv_ {
 
     void SetSMFTableEnlarge(void (*enlarger)(int)) {
       return functions->SetSMFTableEnlarge(enlarger);
+    }
+
+    int* GetSunnyMilkFuzzerMethodSizeTable() {
+      return functions->GetSunnyMilkFuzzerMethodSizeTable();
+    }
+
+    unsigned char* GetSunnyMilkFuzzerMethodHitTable() {
+      return functions->GetSunnyMilkFuzzerMethodHitTable();
+    }
+
+    int GetSunnyMilkFuzzerMethodNumber() {
+      return functions->GetSunnyMilkFuzzerMethodNumber();
     }
 
 #endif /* __cplusplus */
