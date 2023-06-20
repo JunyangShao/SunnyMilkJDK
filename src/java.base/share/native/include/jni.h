@@ -790,6 +790,8 @@ struct JNINativeInterface_ {
     unsigned char* (* GetSunnyMilkFuzzerMethodHitTable)();
 
     int (* GetSunnyMilkFuzzerMethodNumber)();
+
+    void (* SetLibFuzzerFeatureMap)(uint16_t*);
 };
 
 /*
@@ -1923,6 +1925,10 @@ struct JNIEnv_ {
 
     int GetSunnyMilkFuzzerMethodNumber() {
       return functions->GetSunnyMilkFuzzerMethodNumber();
+    }
+
+    void SetLibFuzzerFeatureMap(uint16_t* feature_map) {
+      return functions->SetLibFuzzerFeatureMap(feature_map);
     }
 
 #endif /* __cplusplus */

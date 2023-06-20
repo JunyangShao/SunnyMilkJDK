@@ -178,6 +178,20 @@ int SMF_method_cov_size_table[SMF_METHOD_COV_TABLE_SIZE] = {0};
 unsigned char SMF_method_cov_hit_table[SMF_METHOD_COV_TABLE_SIZE] = {0};
 int SMF_method_cov_table_valid_size = 0;
 
+uint16_t *libFuzzer_feature_map = NULL;
+static const uint32_t kFeatureSetSize = 1 << 21;
+
+uint16_t GetLibFuzzerFeatureAt(uint32_t index) {
+  if (index >= kFeatureSetSize || libFuzzer_feature_map == NULL) {
+    return 0;
+  }
+  return libFuzzer_feature_map[index];
+}
+
+void SetLibFuzzerFeatureMap(uint16_t *the_map) {
+  libFuzzer_feature_map = the_map;
+}
+
 int* GetSunnyMilkFuzzerMethodSizeTable() {
   return SMF_method_cov_size_table;
 }
@@ -3779,7 +3793,9 @@ struct JNINativeInterface_ jni_NativeInterface = {
 
     GetSunnyMilkFuzzerMethodHitTable,
 
-    GetSunnyMilkFuzzerMethodNumber
+    GetSunnyMilkFuzzerMethodNumber,
+
+    SetLibFuzzerFeatureMap
 };
 
 

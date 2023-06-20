@@ -1220,7 +1220,8 @@ void GraphBuilder::_goto(int from_bci, int to_bci) {
 }
 
 
-void GraphBuilder::if_node(Value x, If::Condition cond, Value y, ValueStack* state_before, address smf_bcp = NULL) {
+// void GraphBuilder::if_node(Value x, If::Condition cond, Value y, ValueStack* state_before, address smf_bcp = NULL) {
+void GraphBuilder::if_node(Value x, If::Condition cond, Value y, ValueStack* state_before) {
   BlockBegin* tsux = block_at(stream()->get_dest());
   BlockBegin* fsux = block_at(stream()->next_bci());
   bool is_bb = tsux->bci() < stream()->cur_bci() || fsux->bci() < stream()->cur_bci();
@@ -1230,7 +1231,7 @@ void GraphBuilder::if_node(Value x, If::Condition cond, Value y, ValueStack* sta
   Instruction *i = append(
     if_node_smf(
       new If(x, cond, false, y, tsux, fsux, (is_bb || compilation()->is_optimistic()) ? state_before : NULL, is_bb),
-      smf_bcp));
+      stream()->cur_bci()));
 
   assert(i->as_Goto() == NULL ||
          (i->as_Goto()->sux_at(0) == tsux  && i->as_Goto()->is_safepoint() == tsux->bci() < stream()->cur_bci()) ||
@@ -1278,27 +1279,50 @@ void GraphBuilder::if_node(Value x, If::Condition cond, Value y, ValueStack* sta
 }
 
 // Modified for SunnyMilkFuzzer (if_*)
-void GraphBuilder::if_zero(ValueType* type, If::Condition cond, address smf_bcp = NULL) {
+// void GraphBuilder::if_zero(ValueType* type, If::Condition cond, address smf_bcp = NULL) {
+//   Value y = append(new Constant(intZero));
+//   ValueStack* state_before = copy_state_before();
+//   Value x = ipop();
+//   if_node(x, cond, y, state_before, smf_bcp);
+// }
+
+
+// void GraphBuilder::if_null(ValueType* type, If::Condition cond, address smf_bcp = NULL) {
+//   Value y = append(new Constant(objectNull));
+//   ValueStack* state_before = copy_state_before();
+//   Value x = apop();
+//   if_node(x, cond, y, state_before, smf_bcp);
+// }
+
+
+// void GraphBuilder::if_same(ValueType* type, If::Condition cond, address smf_bcp = NULL) {
+//   ValueStack* state_before = copy_state_before();
+//   Value y = pop(type);
+//   Value x = pop(type);
+//   if_node(x, cond, y, state_before, smf_bcp);
+// }
+
+void GraphBuilder::if_zero(ValueType* type, If::Condition cond) {
   Value y = append(new Constant(intZero));
   ValueStack* state_before = copy_state_before();
   Value x = ipop();
-  if_node(x, cond, y, state_before, smf_bcp);
+  if_node(x, cond, y, state_before);
 }
 
 
-void GraphBuilder::if_null(ValueType* type, If::Condition cond, address smf_bcp = NULL) {
+void GraphBuilder::if_null(ValueType* type, If::Condition cond) {
   Value y = append(new Constant(objectNull));
   ValueStack* state_before = copy_state_before();
   Value x = apop();
-  if_node(x, cond, y, state_before, smf_bcp);
+  if_node(x, cond, y, state_before);
 }
 
 
-void GraphBuilder::if_same(ValueType* type, If::Condition cond, address smf_bcp = NULL) {
+void GraphBuilder::if_same(ValueType* type, If::Condition cond) {
   ValueStack* state_before = copy_state_before();
   Value y = pop(type);
   Value x = pop(type);
-  if_node(x, cond, y, state_before, smf_bcp);
+  if_node(x, cond, y, state_before);
 }
 
 
@@ -1349,7 +1373,7 @@ void GraphBuilder::table_switch(address smf_bcp) {
     // before the body of a loop the state is needed
     ValueStack* state_before = copy_state_if_bb(is_bb);
     // Modified for SunnyMilkFuzzer
-    append(if_node_smf(new If(ipop(), If::eql, true, key, tsux, fsux, state_before, is_bb), smf_bcp));
+    append(if_node_smf(new If(ipop(), If::eql, true, key, tsux, fsux, state_before, is_bb), stream()->cur_bci()));
   } else {
     // collect successors
     BlockList* sux = new BlockList(l + 1, NULL);
@@ -1397,7 +1421,7 @@ void GraphBuilder::lookup_switch(address smf_bcp) {
     // before the body of a loop the state is needed
     ValueStack* state_before = copy_state_if_bb(is_bb);;
     // Modified for SunnyMilkFuzzer
-    append(if_node_smf(new If(ipop(), If::eql, true, key, tsux, fsux, state_before, is_bb), smf_bcp));
+    append(if_node_smf(new If(ipop(), If::eql, true, key, tsux, fsux, state_before, is_bb), stream()->cur_bci()));
   } else {
     // collect successors & keys
     BlockList* sux = new BlockList(l + 1, NULL);
@@ -1430,67 +1454,72 @@ void GraphBuilder::lookup_switch(address smf_bcp) {
   }
 }
 
-If* GraphBuilder::if_node_smf(If* cur_if_node, address smf_bcp) {
-  if (cur_if_node != NULL && smf_bcp != NULL) {
-    static constexpr uintptr_t SMFTableMethodMask = 0xFF00;
-    static constexpr uintptr_t SMFTableBytecodeMask = 0x00FF;
-    uintptr_t smf_method_idx =
-      ((uintptr_t) method()->get_Method()->code_base()) & SMFTableMethodMask;
-    uintptr_t smf_probe_idx1 = ((uintptr_t)smf_bcp & SMFTableBytecodeMask);
-    uintptr_t smf_probe_idx2 = ((uintptr_t)(smf_bcp + 1) & SMFTableBytecodeMask);
-    unsigned char smf_probe_1 = *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_idx1);
-    unsigned char smf_probe_2 = *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_idx2);
-    cur_if_node->set_smf_bcp(smf_bcp);
-    if (smf_probe_1 > 128 && smf_probe_2 > 128) {
-      // exhausted.
-      cur_if_node->set_smf_probe_status(3);
-    } else if (smf_probe_2 > 0) {
-      cur_if_node->set_smf_probe_status(2);
-    } else if (smf_probe_1 > 0) {
-      cur_if_node->set_smf_probe_status(1);
-    } else {
-      cur_if_node->set_smf_probe_status(0);
-    }
-  }
-  cur_if_node->set_smf_method(method()->get_Method()->bcp_from(0));
+If* GraphBuilder::if_node_smf(If* cur_if_node, int smf_bci) {
   return cur_if_node;
+  // TODO!
+  // if (cur_if_node != NULL) {
+  //   static constexpr uintptr_t SMFTableMethodMask = 0xFF00;
+  //   static constexpr uintptr_t SMFTableBytecodeMask = 0x00FF;
+  //   uintptr_t smf_method_idx =
+  //     ((uintptr_t) method()->get_Method()->code_base()) & SMFTableMethodMask;
+  //   // feature offsets in libFuzzer_feature_map
+  //   uintptr_t smf_probe_idx1 = ((uintptr_t)smf_bcp & SMFTableBytecodeMask);
+  //   uintptr_t smf_probe_idx2 = ((uintptr_t)(smf_bcp + 1) & SMFTableBytecodeMask);
+  //   unsigned char smf_probe_1 = *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_idx1);
+  //   unsigned char smf_probe_2 = *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_idx2);
+  //   cur_if_node->set_smf_bcp(smf_bcp);
+  //   if (smf_probe_1 > 128 && smf_probe_2 > 128) {
+  //     // exhausted.
+  //     cur_if_node->set_smf_probe_status(3);
+  //   } else if (smf_probe_2 > 0) {
+  //     cur_if_node->set_smf_probe_status(2);
+  //   } else if (smf_probe_1 > 0) {
+  //     cur_if_node->set_smf_probe_status(1);
+  //   } else {
+  //     cur_if_node->set_smf_probe_status(0);
+  //   }
+  // }
+  // cur_if_node->set_smf_method(method()->get_Method()->bcp_from(0));
+  // return cur_if_node;
 }
 
-Switch* GraphBuilder::switch_node_smf(Switch* cur_switch_node, address smf_bcp) {
-  if (cur_switch_node != NULL && smf_bcp != NULL) {
-    static constexpr uintptr_t SMFTableMethodMask = 0xFF00;
-    static constexpr uintptr_t SMFTableBytecodeMask = 0x00FF;
-    uintptr_t smf_method_idx =
-      ((uintptr_t)method()->get_Method()->code_base()) & SMFTableMethodMask;
-    uintptr_t smf_probe_default_idx =
-      ((uintptr_t)smf_bcp + cur_switch_node->length()) & SMFTableBytecodeMask;
-    unsigned char smf_probe_default =
-      *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_default_idx);
-    bool smf_probe_default_exhausted = smf_probe_default > 128;
-    bool smf_probe_case_exhausted = true;
-    for (int i = 0; i < cur_switch_node->length(); ++i) {
-      uintptr_t smf_probe_idx =
-        ((uintptr_t)smf_bcp + i) & SMFTableBytecodeMask;
-      unsigned char smf_probe = *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_idx);
-      if (smf_probe <= 128) {
-        smf_probe_case_exhausted = false;
-        break;
-      }
-    }
-    cur_switch_node->set_smf_bcp(smf_bcp);
-    if (smf_probe_case_exhausted && smf_probe_default_exhausted) {
-      // exhausted.
-      cur_switch_node->set_smf_probe_status(3);
-    } else if (smf_probe_default_exhausted) {
-      cur_switch_node->set_smf_probe_status(2);
-    } else if (smf_probe_case_exhausted) {
-      cur_switch_node->set_smf_probe_status(1);
-    } else {
-      cur_switch_node->set_smf_probe_status(0);
-    }
-  }
-  cur_switch_node->set_smf_method(method()->get_Method()->bcp_from(0));
+Switch* GraphBuilder::switch_node_smf(Switch* cur_switch_node, int smf_bci) {
   return cur_switch_node;
+  // TODO!
+  // if (cur_switch_node != NULL && smf_bcp != NULL) {
+  //   static constexpr uintptr_t SMFTableMethodMask = 0xFF00;
+  //   static constexpr uintptr_t SMFTableBytecodeMask = 0x00FF;
+  //   uintptr_t smf_method_idx =
+  //     ((uintptr_t)method()->get_Method()->code_base()) & SMFTableMethodMask;
+  //   uintptr_t smf_probe_default_idx =
+  //     ((uintptr_t)smf_bcp + cur_switch_node->length()) & SMFTableBytecodeMask;
+  //   unsigned char smf_probe_default =
+  //     *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_default_idx);
+  //   bool smf_probe_default_exhausted = smf_probe_default > 128;
+  //   bool smf_probe_case_exhausted = true;
+  //   for (int i = 0; i < cur_switch_node->length(); ++i) {
+  //     uintptr_t smf_probe_idx =
+  //       ((uintptr_t)smf_bcp + i) & SMFTableBytecodeMask;
+  //     unsigned char smf_probe = *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_idx);
+  //     if (smf_probe <= 128) {
+  //       smf_probe_case_exhausted = false;
+  //       break;
+  //     }
+  //   }
+  //   cur_switch_node->set_smf_bcp(smf_bcp);
+  //   if (smf_probe_case_exhausted && smf_probe_default_exhausted) {
+  //     // exhausted.
+  //     cur_switch_node->set_smf_probe_status(3);
+  //   } else if (smf_probe_default_exhausted) {
+  //     cur_switch_node->set_smf_probe_status(2);
+  //   } else if (smf_probe_case_exhausted) {
+  //     cur_switch_node->set_smf_probe_status(1);
+  //   } else {
+  //     cur_switch_node->set_smf_probe_status(0);
+  //   }
+  // }
+  // cur_switch_node->set_smf_method(method()->get_Method()->bcp_from(0));
+  // return cur_switch_node;
 }
 
 void GraphBuilder::call_register_finalizer() {
@@ -2755,7 +2784,7 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
     }
 
     // SunnyMilkFuzzer - bytecode pointer
-    address smf_bcp = method()->get_Method()->bcp_from(s.cur_bci());
+    // address smf_bcp = method()->get_Method()->bcp_from(s.cur_bci());
 
     if (scope_data()->is_method_start()) {
       scope_data()->unset_is_method_start();

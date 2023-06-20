@@ -261,9 +261,12 @@ class GraphBuilder {
   void _goto(int from_bci, int to_bci);
   // Modified for SunnyMilkFuzzer (if_*)
   void if_node(Value x, If::Condition cond, Value y, ValueStack* stack_before, address smf_bcp);
-  void if_zero(ValueType* type, If::Condition cond, address smf_bcp);
-  void if_null(ValueType* type, If::Condition cond, address smf_bcp);
-  void if_same(ValueType* type, If::Condition cond, address smf_bcp);
+  // void if_zero(ValueType* type, If::Condition cond, address smf_bcp);
+  // void if_null(ValueType* type, If::Condition cond, address smf_bcp);
+  // void if_same(ValueType* type, If::Condition cond, address smf_bcp);
+  void if_zero(ValueType* type, If::Condition cond);
+  void if_null(ValueType* type, If::Condition cond);
+  void if_same(ValueType* type, If::Condition cond);
   void jsr(int dest);
   void ret(int local_index);
   // Modified for SunnyMilkFuzzer
