@@ -3792,6 +3792,8 @@ struct JNINativeInterface_ jni_NativeInterface = {
 
     GetSunnyMilkFuzzerMethodNumber,
 
+    GetSunnyMilkFuzzerCoverageSize,
+
     SetLibFuzzerFeatureMap
 };
 
