@@ -141,6 +141,9 @@ void Method::check_SMF_method_cov_initialized() {
       int bcis[kMaxBranches];
       int bc_count = 0;
 
+      // The following are state changes, lock them.
+      MutexLocker smf_lock(SunnyMilkFuzzer_lock, Mutex::_no_safepoint_check_flag);
+
       while ((bc = bcs.next()) >= 0 && bc_count < (kMaxBranches)) {
         switch (bc) {
           case Bytecodes::_ifeq:
@@ -211,23 +214,26 @@ void Method::check_SMF_method_cov_initialized() {
 }
 
 int Method::find_SMF_table_offset_from_bci(int bci) {
+  {
+    // The check might interfere with check_SMF_method_cov_initialized(), lock it.
+    MutexLocker smf_lock(SunnyMilkFuzzer_lock, Mutex::_no_safepoint_check_flag);
+    if (offset_in_SMF_table == -1 || SMF_method_cov_table_size == 0) return -1;
+  }
   int result = -1;
-  if (offset_in_SMF_table != -1 && SMF_method_cov_table_size != 0) {
-    // binary search in SMF_table_branch_bcis.
-    int *SMF_table_branch_bcis = GetSunnyMilkFuzzerBranchBCIs() + offset_in_SMF_table;
-    int low = 0;
-    int high = SMF_method_cov_table_size;
-    while (low < high) {
-      int mid = low + (high - low) / 2;
-      if (SMF_table_branch_bcis[mid] == bci) {
-        result = mid;
-        high = mid;
-      }
-      else if (SMF_table_branch_bcis[mid] < bci)
-        low = mid + 1;
-      else
-        high = mid;
+  // binary search in SMF_table_branch_bcis.
+  int *SMF_table_branch_bcis = GetSunnyMilkFuzzerBranchBCIs() + offset_in_SMF_table;
+  int low = 0;
+  int high = SMF_method_cov_table_size;
+  while (low < high) {
+    int mid = low + (high - low) / 2;
+    if (SMF_table_branch_bcis[mid] == bci) {
+      result = mid;
+      high = mid;
     }
+    else if (SMF_table_branch_bcis[mid] < bci)
+      low = mid + 1;
+    else
+      high = mid;
   }
   return result;
 }

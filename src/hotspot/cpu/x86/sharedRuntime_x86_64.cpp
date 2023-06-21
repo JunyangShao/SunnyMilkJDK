@@ -603,12 +603,12 @@ static void gen_c2i_adapter(MacroAssembler *masm,
   // generate_i2c2i_adapter, and rscratch1 seems free-to-use,
   // I will use this implementation.
   // rax seems free-to-use based on the following section...
-  static constexpr uintptr_t SMFTableMaxSizeMask = 0xFF00;
-  __ movptr(rscratch1, Address(rbx, in_bytes(Method::const_offset())));
-  __ lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
-  __ andptr(rscratch1, SMFTableMaxSizeMask);
-  __ lea(rax, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
-  __ movb(Address(rax, rscratch1), 1);
+  // static constexpr uintptr_t SMFTableMaxSizeMask = 0xFF00;
+  // __ movptr(rscratch1, Address(rbx, in_bytes(Method::const_offset())));
+  // __ lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
+  // __ andptr(rscratch1, SMFTableMaxSizeMask);
+  // __ lea(rax, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  // __ movb(Address(rax, rscratch1), 1);
 
   // Since all args are passed on the stack, total_args_passed *
   // Interpreter::stackElementSize is the space we need. Plus 1 because
@@ -780,12 +780,12 @@ void SharedRuntime::gen_i2c_adapter(MacroAssembler *masm,
   // generate_i2c2i_adapter, and rscratch1 seems free-to-use,
   // I will use this implementation.
   // rax seems free-to-use based on the following section...
-  static constexpr uintptr_t SMFTableMaxSizeMask = 0xFF00;
-  __ movptr(rscratch1, Address(rbx, in_bytes(Method::const_offset())));
-  __ lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
-  __ andptr(rscratch1, SMFTableMaxSizeMask);
-  __ lea(rax, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
-  __ movb(Address(rax, rscratch1), 1);
+  // static constexpr uintptr_t SMFTableMaxSizeMask = 0xFF00;
+  // __ movptr(rscratch1, Address(rbx, in_bytes(Method::const_offset())));
+  // __ lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
+  // __ andptr(rscratch1, SMFTableMaxSizeMask);
+  // __ lea(rax, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  // __ movb(Address(rax, rscratch1), 1);
 
   // Pick up the return address
   __ movptr(rax, Address(rsp, 0));
@@ -1938,11 +1938,11 @@ nmethod* SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
 
   // SunnyMilkFuzzer coverage probe - method hit - c2c
   // Given the above comment, I will use a simple implementation.
-  static constexpr uintptr_t SMFTableMaxSizeMask = 0xFF00;
-  address smf_method = method()->code_base();
-  __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() +
-    ((uintptr_t)smf_method & SMFTableMaxSizeMask), relocInfo::none));
-  __ movb(Address(rscratch1, 0), 1);
+  // static constexpr uintptr_t SMFTableMaxSizeMask = 0xFF00;
+  // address smf_method = method()->code_base();
+  // __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage() +
+  //   ((uintptr_t)smf_method & SMFTableMaxSizeMask), relocInfo::none));
+  // __ movb(Address(rscratch1, 0), 1);
 
   const Register ic_reg = rax;
   const Register receiver = j_rarg0;

@@ -660,12 +660,12 @@ void TemplateInterpreterGenerator::lock_method() {
 //      rdx: cp cache
 void TemplateInterpreterGenerator::generate_fixed_frame(bool native_call) {
   // SunnyMilkFuzzer coverage probe - method hit - i2i or any-2-native
-  static constexpr uintptr_t SMFTableMaxSizeMask = 0xFF00;
-  __ movptr(rscratch1, Address(rbx, in_bytes(Method::const_offset())));
-  __ lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
-  __ andptr(rscratch1, SMFTableMaxSizeMask);
-  __ lea(rscratch2, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
-  __ movb(Address(rscratch2, rscratch1), 1);
+  // static constexpr uintptr_t SMFTableMaxSizeMask = 0xFF00;
+  // __ movptr(rscratch1, Address(rbx, in_bytes(Method::const_offset())));
+  // __ lea(rscratch1, Address(rscratch1, ConstMethod::codes_offset()));
+  // __ andptr(rscratch1, SMFTableMaxSizeMask);
+  // __ lea(rscratch2, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
+  // __ movb(Address(rscratch2, rscratch1), 1);
 
   // initialize fixed part of activation frame
   __ push(rax);        // save return address

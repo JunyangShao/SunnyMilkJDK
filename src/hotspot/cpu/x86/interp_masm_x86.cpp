@@ -1578,9 +1578,12 @@ void InterpreterMacroAssembler::profile_taken_branch(Register mdp,
   // SunnyMilkFuzzer save coverage
   // rcx is already holding Method* given its caller is always `branch`. We need to save it
   // and restore it later. we don't need to save callee-saved registers like rbcp or rbx.
-  push(rcx);
-  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rcx, rbcp_smf);
-  pop(rcx);
+  pusha();
+  // push(rcx);
+  movl(mdp, 0);
+  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rcx, rbcp_smf, mdp);
+  // pop(rcx);
+  popa();
   
   if (ProfileInterpreter) {
     Label profile_continue;
@@ -1622,10 +1625,11 @@ void InterpreterMacroAssembler::profile_not_taken_branch(Register mdp) {
   // incrementb(Address(rscratch1, rscratch2, Address::times_1));
 
   // SunnyMilkFuzzer save coverage
+  pusha();
   get_method(rscratch1);
-  movl(rscratch2, rbcp_smf);
-  incrementl(rscratch2);
-  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rscratch1, rscratch2);
+  movl(mdp, 1);
+  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rscratch1, rbcp_smf, mdp);
+  popa();
 
   if (ProfileInterpreter) {
     Label profile_continue;
@@ -1981,11 +1985,11 @@ void InterpreterMacroAssembler::profile_switch_default(Register mdp) {
   // rbx would be used later in the tableswitch/linearlookupswitch/binarylookupswitch,
   // but since it's callee-saved,
   // we don't need to save it here.
-  movl(rscratch1, rbcp_smf);
-  addl(rscratch1, mdp);
-  get_method(rscratch2);
-  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rscratch1, rscratch2);
-
+  pusha();
+  get_method(rscratch1);
+  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rscratch1, rbcp_smf, mdp);
+  popa();
+  
   if (ProfileInterpreter) {
     Label profile_continue;
 
@@ -2025,13 +2029,12 @@ void InterpreterMacroAssembler::profile_switch_case(Register index,
   // SunnyMilkFuzzer save coverage
   // rdx would be used later in the tableswitch/linearlookupswitch/binarylookupswitch,
   // save it.
+  pusha();
   get_method(reg2);
-  movl(rscratch2, rbcp_smf);
-  addl(rscratch2, index);
-  movl(index, rscratch2);
-  push(rdx);
-  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), reg2, index);
-  pop(rdx);
+  // push(rdx);
+  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), reg2, rbcp_smf, index);
+  // pop(rdx);
+  popa();
 
   if (ProfileInterpreter) {
     Label profile_continue;

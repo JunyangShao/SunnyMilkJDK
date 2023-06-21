@@ -81,8 +81,8 @@
 #endif
 
 // SMF tracer
-void SMF_tracer(void* thread, uintptr_t method, uintptr_t bcp) {
-  SMF_tracer_ptr(method, bcp);
+void SMF_tracer(void* thread, uintptr_t method, uintptr_t bcp, uintptr_t offset) {
+  SMF_tracer_ptr(method, bcp, offset);
 }
 
 // Shared stub locations

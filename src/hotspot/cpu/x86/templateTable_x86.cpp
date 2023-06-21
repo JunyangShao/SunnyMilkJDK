@@ -2536,11 +2536,14 @@ void TemplateTable::tableswitch() {
   __ bind(default_case);
 
   // SunnyMilkFuzzer save coverage
-  __ movl(rax, rbcp);
-  __ movl(rscratch1, rcx); // lo
-  __ subl(rscratch1, rdx); // lo - hi
-  __ addl(rscratch1, 1);   // lo - hi + 1
-  __ addl(rax, rscratch1);   // default is at the outer edge of the table.
+  // __ movl(rax, rbcp);
+  // __ movl(rscratch1, rcx); // lo
+  // __ subl(rscratch1, rdx); // lo - hi
+  // __ addl(rscratch1, 1);   // lo - hi + 1
+  // __ addl(rax, rscratch1);   // default is at the outer edge of the table.
+  __ movl(rax, rdx); // hi
+  __ subl(rax, rcx); // hi - lo
+  __ addl(rax, 1);   // hi - lo + 1
 
   __ profile_switch_default(rax);
   __ movl(rdx, Address(rbx, 0));
@@ -2576,7 +2579,9 @@ void TemplateTable::fast_linearswitch() {
   // default case
 
   // SunnyMilkFuzzer save coverage
-  __ addl(rax, rbcp);
+  // __ addl(rax, rbcp);
+  __ movl(rax, Address(rbx, BytesPerInt));
+  __ bswapl(rax);
 
   __ profile_switch_default(rax);
   __ movl(rdx, Address(rbx, 0));
@@ -2719,10 +2724,12 @@ void TemplateTable::fast_binaryswitch() {
 
   // SunnyMilkFuzzer save coverage
   // using `incrementb`.
-  __ movl(i, rbcp);
-  __ movl(rscratch1, Address(array, -BytesPerInt));
-  __ bswapl(rscratch1); // rscratch1 = length(array);
-  __ addl(i, rscratch1); // default is at the edge.
+  // __ movl(i, rbcp);
+  // __ movl(rscratch1, Address(array, -BytesPerInt));
+  // __ bswapl(rscratch1); // rscratch1 = length(array);
+  // __ addl(i, rscratch1); // default is at the edge.
+  __ movl(i, Address(array, -BytesPerInt));
+  __ bswapl(i);
 
   __ profile_switch_default(i);
   __ movl(j, Address(array, -2 * BytesPerInt));
