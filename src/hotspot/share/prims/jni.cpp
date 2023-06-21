@@ -112,6 +112,31 @@ alignas(4096) unsigned char SMF_table[1 << 20] = {0};
 // It will be used by the interpreter and JIT compiler to locate the 8bit counter.
 int SMF_table_branch_bcis[1 << 20] = {0};
 bool SMF_begin = false;
+
+#define SMF_METHOD_COV_TABLE_SIZE 65536
+#define SMF_METHOD_COV_TABLE_SIZE_MASK 0xFFFF
+#define SMF_NAME_MAX_LENGTH 256
+
+struct SMFMethodCovTableEntry {
+    char klass_name[SMF_NAME_MAX_LENGTH] = {0};
+    char method_name[SMF_NAME_MAX_LENGTH] = {0};
+    int cov_tbl_size = 0;
+    int offset_in_SMF_table = 0;
+    bool in_use = false; // Indicates whether this slot is occupied
+    int offset_in_SMF_method_cov_hit_table = 0;
+};
+
+// At max support 65536 methods, if larger than this, the coverage for those methods will be gone.
+struct SMFMethodCovTableEntry SMF_method_cov_table[SMF_METHOD_COV_TABLE_SIZE];
+int SMF_method_cov_size_table[SMF_METHOD_COV_TABLE_SIZE] = {0};
+unsigned char SMF_method_cov_hit_table[SMF_METHOD_COV_TABLE_SIZE] = {0};
+int SMF_method_cov_table_valid_size = 0;
+
+uint16_t *libFuzzer_feature_map = NULL;
+static const uint32_t kFeatureSetSize = 1 << 21;
+static const uint32_t kFeatureSetSizeMask = kFeatureSetSize - 1;
+
+
 unsigned char* GetSunnyMilkFuzzerCoverage() {
   return SMF_table;
 }
@@ -143,7 +168,7 @@ void SMF_default_tracer(uintptr_t method_ptr, uintptr_t bcp) {
     int offset_in_SMF_table = method->find_SMF_table_offset_from_bcp(reinterpret_cast<address>(bcp));
     if (offset_in_SMF_table != -1) {
       SMF_table[offset_in_SMF_table]++;
-      SMF_method_cov_hit_table[method->offset_in_SMF_method_cov_hit_table()] = 1;
+      SMF_method_cov_hit_table[method->offset_in_SMF_method_cov_hit_table] = 1;
     }
   }
 }
@@ -158,29 +183,6 @@ void (*SMFTableEnlarge)(int) = NULL;
 void SetSMFTableEnlarge(void (*enlarge)(int)) {
   SMFTableEnlarge = enlarge;
 }
-
-#define SMF_METHOD_COV_TABLE_SIZE 65536
-#define SMF_METHOD_COV_TABLE_SIZE_MASK 0xFFFF
-#define SMF_NAME_MAX_LENGTH 256
-
-struct SMFMethodCovTableEntry {
-    char klass_name[SMF_NAME_MAX_LENGTH] = {0};
-    char method_name[SMF_NAME_MAX_LENGTH] = {0};
-    int cov_tbl_size = 0;
-    int offset_in_SMF_table = 0;
-    bool in_use = false; // Indicates whether this slot is occupied
-    int offset_in_SMF_method_cov_hit_table = 0;
-};
-
-// At max support 65536 methods, if larger than this, the coverage for those methods will be gone.
-struct SMFMethodCovTableEntry SMF_method_cov_table[SMF_METHOD_COV_TABLE_SIZE];
-int SMF_method_cov_size_table[SMF_METHOD_COV_TABLE_SIZE] = {0};
-unsigned char SMF_method_cov_hit_table[SMF_METHOD_COV_TABLE_SIZE] = {0};
-int SMF_method_cov_table_valid_size = 0;
-
-uint16_t *libFuzzer_feature_map = NULL;
-static const uint32_t kFeatureSetSize = 1 << 21;
-static const uint32_t kFeatureSetSizeMask = kFeatureSetSize - 1;
 
 uint16_t GetLibFuzzerFeatureAt(int index, int offset) {
   if (libFuzzer_feature_map == NULL) {
@@ -208,11 +210,11 @@ int GetSunnyMilkFuzzerMethodNumber() {
 int SMFHash(const char* klass_name, const char* method_name, size_t klass_name_len, size_t method_name_len) {
   int hash = 0;
 
-  for (int i = 0; i < klass_name_len; i++) {
-      hash += method_name_len[i];
+  for (int i = 0; i < (int) klass_name_len; i++) {
+      hash += method_name[i];
   }
-  for (int i = 0; i < method_name_len; i++) {
-      hash += klass_name_len[i];
+  for (int i = 0; i < (int) method_name_len; i++) {
+      hash += klass_name[i];
   }
 
   return hash & SMF_METHOD_COV_TABLE_SIZE_MASK;
@@ -239,8 +241,8 @@ unsigned long long SMFMethodCovTableGetOrInsert(const char* klass_name, const ch
     if (!SMF_method_cov_table[index].in_use) {
       search_status = 1;
       break;
-    } else if (memcmp(SMF_method_cov_table[index].klass_name, klass_name,
-        klass_name_len) == 0 && memcmp(SMF_method_cov_table[index].method_name, method_name_len) == 0) {
+    } else if (memcpy(SMF_method_cov_table[index].klass_name, klass_name,
+        klass_name_len) == 0 && memcpy(SMF_method_cov_table[index].method_name, method_name, method_name_len) == 0) {
       search_status = 2;
       break;
     } else {
@@ -255,7 +257,7 @@ unsigned long long SMFMethodCovTableGetOrInsert(const char* klass_name, const ch
     memcpy(SMF_method_cov_table[index].method_name, method_name, method_name_len);
     SMF_method_cov_table[index].cov_tbl_size = cov_tbl_size;
     SMF_method_cov_table[index].offset_in_SMF_table = SMF_table_valid_size;
-    SMF_method_cov_table[index].inUse = true;
+    SMF_method_cov_table[index].in_use = true;
     SMF_method_cov_table[index].offset_in_SMF_method_cov_hit_table = SMF_method_cov_table_valid_size;
 
     SMF_method_cov_size_table[SMF_method_cov_table_valid_size++] = cov_tbl_size;
