@@ -1390,7 +1390,7 @@ void GraphBuilder::table_switch(address smf_bcp) {
     // before the body of a loop the state is needed
     ValueStack* state_before = copy_state_if_bb(has_bb);
     Instruction* res =
-      append(switch_node_smf(new TableSwitch(ipop(), sux, sw.low_key(), state_before, has_bb), smf_bcp));
+      append(switch_node_smf(new TableSwitch(ipop(), sux, sw.low_key(), state_before, has_bb), stream()->cur_bci()));
 #ifdef ASSERT
     if (res->as_Goto()) {
       for (i = 0; i < l; i++) {
@@ -1441,7 +1441,7 @@ void GraphBuilder::lookup_switch(address smf_bcp) {
     // before the body of a loop the state is needed
     ValueStack* state_before = copy_state_if_bb(has_bb);
     Instruction* res =
-      append(switch_node_smf(new LookupSwitch(ipop(), sux, keys, state_before, has_bb), smf_bcp));
+      append(switch_node_smf(new LookupSwitch(ipop(), sux, keys, state_before, has_bb), stream()->cur_bci()));
 #ifdef ASSERT
     if (res->as_Goto()) {
       for (i = 0; i < l; i++) {
@@ -1455,14 +1455,11 @@ void GraphBuilder::lookup_switch(address smf_bcp) {
 }
 
 If* GraphBuilder::if_node_smf(If* cur_if_node, int smf_bci) {
-  return cur_if_node;
-  // TODO!
-  // if (cur_if_node != NULL) {
+  // if (cur_if_node != NULL && smf_bcp != NULL) {
   //   static constexpr uintptr_t SMFTableMethodMask = 0xFF00;
   //   static constexpr uintptr_t SMFTableBytecodeMask = 0x00FF;
   //   uintptr_t smf_method_idx =
   //     ((uintptr_t) method()->get_Method()->code_base()) & SMFTableMethodMask;
-  //   // feature offsets in libFuzzer_feature_map
   //   uintptr_t smf_probe_idx1 = ((uintptr_t)smf_bcp & SMFTableBytecodeMask);
   //   uintptr_t smf_probe_idx2 = ((uintptr_t)(smf_bcp + 1) & SMFTableBytecodeMask);
   //   unsigned char smf_probe_1 = *(GetSunnyMilkFuzzerCoverage() + smf_method_idx + smf_probe_idx1);
@@ -1481,11 +1478,42 @@ If* GraphBuilder::if_node_smf(If* cur_if_node, int smf_bci) {
   // }
   // cur_if_node->set_smf_method(method()->get_Method()->bcp_from(0));
   // return cur_if_node;
+  if (cur_if_node != NULL) {
+    int probe1_idx = method()->get_Method()->find_SMF_table_offset_from_bci(smf_bci);
+    if (probe1_idx == -1) return cur_if_node;
+    int probe2_idx = probe1_idx + 1;
+    probe1_idx += method()->get_Method()->offset_in_SMF_table;
+    probe2_idx += method()->get_Method()->offset_in_SMF_table;
+    bool probe1_exhausted = true;
+    bool probe2_exhausted = true;
+    for (int i = 0; i < 8; ++i) {
+      if (GetLibFuzzerFeatureAt(probe1_idx, i) == 0) {
+        probe1_exhausted = false;
+        break;
+      }
+    }
+    for (int i = 0; i < 8; ++i) {
+      if (GetLibFuzzerFeatureAt(probe2_idx, i) == 0) {
+        probe2_exhausted = false;
+        break;
+      }
+    }
+    if (probe1_exhausted && probe2_exhausted) {
+      // exhausted.
+      cur_if_node->set_smf_probe_status(3);
+    } else if (probe2_exhausted) {
+      cur_if_node->set_smf_probe_status(2);
+    } else if (probe1_exhausted) {
+      cur_if_node->set_smf_probe_status(1);
+    } else {
+      cur_if_node->set_smf_probe_status(0);
+    }
+    cur_if_node->set_smf_8bit_counter_idx(probe1_idx);
+  }
+  return cur_if_node;
 }
 
 Switch* GraphBuilder::switch_node_smf(Switch* cur_switch_node, int smf_bci) {
-  return cur_switch_node;
-  // TODO!
   // if (cur_switch_node != NULL && smf_bcp != NULL) {
   //   static constexpr uintptr_t SMFTableMethodMask = 0xFF00;
   //   static constexpr uintptr_t SMFTableBytecodeMask = 0x00FF;
@@ -1520,6 +1548,43 @@ Switch* GraphBuilder::switch_node_smf(Switch* cur_switch_node, int smf_bci) {
   // }
   // cur_switch_node->set_smf_method(method()->get_Method()->bcp_from(0));
   // return cur_switch_node;
+  if (cur_switch_node != NULL) {
+    int probe_start_idx = method()->get_Method()->find_SMF_table_offset_from_bci(smf_bci);
+    if (probe_start_idx == -1) return cur_switch_node;
+    int probe_default_idx = probe_start_idx + cur_switch_node->length();
+    probe_start_idx += method()->get_Method()->offset_in_SMF_table;
+    probe_default_idx += method()->get_Method()->offset_in_SMF_table;
+    bool probe_default_exhausted = true;
+    bool probe_case_exhausted = true;
+    for (int i = 0; i < 8; ++i) {
+      if (GetLibFuzzerFeatureAt(probe_default_idx, i) == 0) {
+        probe_default_exhausted = false;
+        break;
+      }
+    }
+    for (int i = 0; i < cur_switch_node->length(); ++i) {
+      int probe_idx = probe_start_idx + i;
+      for (int j = 0; j < 8; ++j) {
+        if (GetLibFuzzerFeatureAt(probe_idx, j) == 0) {
+          probe_case_exhausted = false;
+          break;
+        }
+      }
+      if (!probe_case_exhausted) break;
+    }
+    if (probe_case_exhausted && probe_default_exhausted) {
+      // exhausted.
+      cur_switch_node->set_smf_probe_status(3);
+    } else if (probe_default_exhausted) {
+      cur_switch_node->set_smf_probe_status(2);
+    } else if (probe_case_exhausted) {
+      cur_switch_node->set_smf_probe_status(1);
+    } else {
+      cur_switch_node->set_smf_probe_status(0);
+    }
+    cur_switch_node->set_smf_8bit_counter_idx(probe_start_idx);
+  }
+  return cur_switch_node;
 }
 
 void GraphBuilder::call_register_finalizer() {
@@ -2789,7 +2854,8 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
     if (scope_data()->is_method_start()) {
       scope_data()->unset_is_method_start();
       SMFMethodStart* smf_method_start = new SMFMethodStart();
-      smf_method_start->set_smf_method(method()->get_Method()->bcp_from(0));
+      // smf_method_start->set_smf_method(method()->get_Method()->bcp_from(0));
+      smf_method_start->set_smf_method(method()->get_Method()->offset_in_SMF_method_cov_hit_table);
       append(smf_method_start);
       scope_data()->set_smf_method_start(smf_method_start);
     }

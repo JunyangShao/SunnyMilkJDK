@@ -1999,8 +1999,9 @@ LEAF(If, BlockEnd)
                              // bytecode stream?
   // SunnyMilkFuzzer - coverage observed
   int       _smf_probe_status = 3;
-  address       _smf_bcp = NULL;
-  address       _smf_method = NULL;
+  // address       _smf_bcp = NULL;
+  // address       _smf_method = NULL;
+  address          _smf_8bit_counter_idx;
   
  public:
   // creation
@@ -2061,10 +2062,13 @@ LEAF(If, BlockEnd)
   // SunnyMilkFuzzer - coverage observed
   void set_smf_probe_status(int value)      { _smf_probe_status = value; }
   int smf_probe_status() const              { return _smf_probe_status; }
-  void set_smf_bcp(address value)      { _smf_bcp = value; }
-  address smf_bcp() const              { return _smf_bcp; }
-  void set_smf_method(address value)      { _smf_method = value; }
-  address smf_method() const              { return _smf_method; }
+  // void set_smf_bcp(address value)      { _smf_bcp = value; }
+  // address smf_bcp() const              { return _smf_bcp; }
+  // void set_smf_method(address value)      { _smf_method = value; }
+  // address smf_method() const              { return _smf_method; }
+
+  void set_smf_8bit_counter_idx(address value)      { _smf_8bit_counter_idx = value; }
+  address smf_8bit_counter_idx() const              { return _smf_8bit_counter_idx; }
 };
 
 
@@ -2127,8 +2131,9 @@ BASE(Switch, BlockEnd)
   Value       _tag;
   // SunnyMilkFuzzer - coverage observed
   int       _smf_probe_status = 3;
-  address       _smf_bcp = NULL;
-  address       _smf_method = NULL;
+  // address       _smf_bcp = NULL;
+  // address       _smf_method = NULL;
+  address          _smf_8bit_counter_idx;
 
  public:
   // creation
@@ -2151,10 +2156,12 @@ BASE(Switch, BlockEnd)
   // SunnyMilkFuzzer - coverage observed
   void set_smf_probe_status(int value)      { _smf_probe_status = value; }
   int smf_probe_status() const              { return _smf_probe_status; }
-  void set_smf_bcp(address value)      { _smf_bcp = value; }
-  address smf_bcp() const              { return _smf_bcp; }
-  void set_smf_method(address value)      { _smf_method = value; }
-  address smf_method() const              { return _smf_method; }
+  // void set_smf_bcp(address value)      { _smf_bcp = value; }
+  // address smf_bcp() const              { return _smf_bcp; }
+  // void set_smf_method(address value)      { _smf_method = value; }
+  // address smf_method() const              { return _smf_method; }
+  void set_smf_8bit_counter_idx(address value)      { _smf_8bit_counter_idx = value; }
+  address smf_8bit_counter_idx() const              { return _smf_8bit_counter_idx; }
 };
 
 

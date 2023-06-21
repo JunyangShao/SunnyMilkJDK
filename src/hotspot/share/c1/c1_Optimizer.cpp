@@ -440,8 +440,9 @@ class BlockMerger: public BlockClosure {
                   If* newif = new If(ifop->x(), ifop->cond(), false, ifop->y(),
                                      tblock, fblock, if_->state_before(), if_->is_safepoint());
                   newif->set_state(if_->state()->copy());
-                  newif->set_smf_bcp(if_->smf_bcp());
-                  newif->set_smf_method(if_->smf_method());
+                  // newif->set_smf_bcp(if_->smf_bcp());
+                  // newif->set_smf_method(if_->smf_method());
+                  newif->set_smf_8bit_counter_idx(if_->smf_8bit_counter_idx());
                   newif->set_smf_probe_status(if_->smf_probe_status());
 
                   assert(prev->next() == if_, "must be guaranteed by above search");

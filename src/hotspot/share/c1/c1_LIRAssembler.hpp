@@ -206,7 +206,8 @@ class LIR_Assembler: public CompilationResourceObj {
   void emit_delay(LIR_OpDelay* op);
 
   // SunnyMilkFuzzer emit probe helper.
-  void emit_smf_probe_helper(address smf_bcp, address smf_method);
+  // void emit_smf_probe_helper(address smf_bcp, address smf_method);
+  void emit_smf_probe_helper(address smf_8bit_counter_idx);
 
   void arith_op(LIR_Code code, LIR_Opr left, LIR_Opr right, LIR_Opr dest, CodeEmitInfo* info, bool pop_fpu_stack);
   void arithmetic_idiv(LIR_Code code, LIR_Opr left, LIR_Opr right, LIR_Opr temp, LIR_Opr result, CodeEmitInfo* info);

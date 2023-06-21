@@ -2347,15 +2347,15 @@ void LIRGenerator::do_SwitchRanges(SwitchRangeArray* x, LIR_Opr value, BlockBegi
     if (low_key == high_key) {
       __ cmp(lir_cond_equal, value, low_key);
       if (orig_x->smf_probe_status() == 0 || orig_x->smf_probe_status() == 2)
-        __ branch(lir_cond_equal, dest, 2, orig_x->smf_bcp() + low_key, orig_x->smf_method());
+        __ branch(lir_cond_equal, dest, 2, orig_x->smf_8bit_counter_idx() + low_key);
       else
         __ branch(lir_cond_equal, dest);
     } else if (high_key - low_key == 1) {
       if (orig_x->smf_probe_status() == 0 || orig_x->smf_probe_status() == 2) {
         __ cmp(lir_cond_equal, value, low_key);
-        __ branch(lir_cond_equal, dest, 2, orig_x->smf_bcp() + low_key, orig_x->smf_method());
+        __ branch(lir_cond_equal, dest, 2, orig_x->smf_8bit_counter_idx() + low_key);
         __ cmp(lir_cond_equal, value, high_key);
-        __ branch(lir_cond_equal, dest, 2, orig_x->smf_bcp() + high_key, orig_x->smf_method());
+        __ branch(lir_cond_equal, dest, 2, orig_x->smf_8bit_counter_idx() + high_key);
       } else {
         __ cmp(lir_cond_equal, value, low_key);
         __ branch(lir_cond_equal, dest);
@@ -2371,14 +2371,14 @@ void LIRGenerator::do_SwitchRanges(SwitchRangeArray* x, LIR_Opr value, BlockBegi
       __ branch(lir_cond_less, L->label());
       __ cmp(lir_cond_lessEqual, value, high_key);
       if (orig_x->smf_probe_status() == 0 || orig_x->smf_probe_status() == 2)
-        __ branch(lir_cond_lessEqual, dest, 2, orig_x->smf_bcp() + low_key, orig_x->smf_method());
+        __ branch(lir_cond_lessEqual, dest, 2, orig_x->smf_8bit_counter_idx() + low_key);
       else
         __ branch(lir_cond_lessEqual, dest);
       __ branch_destination(L->label());
     }
   }
   if (orig_x->smf_probe_status() <= 1) {
-    __ jump(default_sux, 2, orig_x->smf_bcp() + orig_x->length(), orig_x->smf_method());
+    __ jump(default_sux, 2, orig_x->smf_8bit_counter_idx() + orig_x->length());
   } else {
     __ jump(default_sux);
   }
@@ -2498,7 +2498,7 @@ void LIRGenerator::do_TableSwitch(TableSwitch* x) {
     if (x->smf_probe_status() == 0 || x->smf_probe_status() == 2) {
       for (int i = 0; i < len; i++) {
         __ cmp(lir_cond_equal, value, i + lo_key);
-        __ branch(lir_cond_equal, x->sux_at(i), 2, x->smf_bcp() + i, x->smf_method());
+        __ branch(lir_cond_equal, x->sux_at(i), 2, x->smf_8bit_counter_idx() + i);
       }
     } else {
       for (int i = 0; i < len; i++) {
@@ -2507,7 +2507,7 @@ void LIRGenerator::do_TableSwitch(TableSwitch* x) {
       }
     }
     if (x->smf_probe_status() <= 1) {
-      __ jump(x->default_sux(), 2, x->smf_bcp() + len, x->smf_method());
+      __ jump(x->default_sux(), 2, x->smf_8bit_counter_idx() + len);
     } else {
       __ jump(x->default_sux());
     }
@@ -2568,7 +2568,7 @@ void LIRGenerator::do_LookupSwitch(LookupSwitch* x) {
     if (x->smf_probe_status() == 0 || x->smf_probe_status() == 2) {
       for (int i = 0; i < len; i++) {
         __ cmp(lir_cond_equal, value, x->key_at(i));
-        __ branch(lir_cond_equal, x->sux_at(i), 2, x->smf_bcp() + i, x->smf_method());
+        __ branch(lir_cond_equal, x->sux_at(i), 2, x->smf_8bit_counter_idx() + i);
       }
     } else {
       for (int i = 0; i < len; i++) {
@@ -2577,7 +2577,7 @@ void LIRGenerator::do_LookupSwitch(LookupSwitch* x) {
       }
     }
     if (x->smf_probe_status() <= 1) {
-      __ jump(x->default_sux(), 2, x->smf_bcp() + len, x->smf_method());
+      __ jump(x->default_sux(), 2, x->smf_8bit_counter_idx() + len);
     } else {
       __ jump(x->default_sux());
     }

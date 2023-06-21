@@ -81,13 +81,6 @@ class Method : public Metadata {
                                                  // note: can have vtables with >2**16 elements (because of inheritance)
   u2                _intrinsic_id;               // vmSymbols::intrinsic_id (0 == _none)
 
-  // SunnyMilkFuzzer - the offset of the states in SMF_table and SMF_table_branch_bcis.
-  // When it's -1, it indicates it's not initialized yet or is not a SMF-instrumentable method.
-  int offset_in_SMF_table = -1;
-  int offset_in_SMF_method_cov_hit_table = -1;
-  // The size of the method in SMF_method_cov_table.
-  int SMF_method_cov_table_size = 0;
-
   // Flags
   enum Flags {
     _caller_sensitive      = 1 << 0,
@@ -144,6 +137,14 @@ class Method : public Metadata {
 
   // SunnyMilkFuzzer related functions.
   // If uninitialized, initialize the offset_in_SMF_table and SMF_method_cov_table_size.
+
+  // the offset of the states in SMF_table and SMF_table_branch_bcis.
+  // When it's -1, it indicates it's not initialized yet or is not a SMF-instrumentable method.
+  int offset_in_SMF_table = -1;
+  int offset_in_SMF_method_cov_hit_table = -1;
+  // The size of the method in SMF_method_cov_table.
+  int SMF_method_cov_table_size = 0;
+
   void check_SMF_method_cov_initialized();
   int  find_SMF_table_offset_from_bci(int bci);
   int  find_SMF_table_offset_from_bcp(address bcp);

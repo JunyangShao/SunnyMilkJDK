@@ -180,12 +180,13 @@ int SMF_method_cov_table_valid_size = 0;
 
 uint16_t *libFuzzer_feature_map = NULL;
 static const uint32_t kFeatureSetSize = 1 << 21;
+static const uint32_t kFeatureSetSizeMask = kFeatureSetSize - 1;
 
-uint16_t GetLibFuzzerFeatureAt(uint32_t index) {
-  if (index >= kFeatureSetSize || libFuzzer_feature_map == NULL) {
+uint16_t GetLibFuzzerFeatureAt(int index, int offset) {
+  if (libFuzzer_feature_map == NULL) {
     return 0;
   }
-  return libFuzzer_feature_map[index];
+  return libFuzzer_feature_map[((index << 3) + offset) & kFeatureSetSizeMask];
 }
 
 void SetLibFuzzerFeatureMap(uint16_t *the_map) {

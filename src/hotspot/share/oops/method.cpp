@@ -160,15 +160,15 @@ void Method::check_SMF_method_cov_initialized() {
           case Bytecodes::_if_acmpeq:
           case Bytecodes::_if_acmpne:
             // each normal branch has two 8-bit counters.
-            bci[SMF_method_cov_table_size] = bc_count;
-            bci[SMF_method_cov_table_size + 1] = bc_count;
+            bcis[SMF_method_cov_table_size] = bc_count;
+            bcis[SMF_method_cov_table_size + 1] = bc_count;
             SMF_method_cov_table_size += 2;
 
           case Bytecodes::_lookupswitch: {
             Bytecode_lookupswitch lookupswitch(this, bcs.bcp());
             // each lookupswitch has 1 + number_of_pairs 8-bit counters.
             for (int i = 0; i < lookupswitch.number_of_pairs() + 1; ++i) {
-              bci[SMF_method_cov_table_size] = bc_count;
+              bcis[SMF_method_cov_table_size] = bc_count;
               SMF_method_cov_table_size++;
             }
             break;
@@ -176,7 +176,7 @@ void Method::check_SMF_method_cov_initialized() {
           case Bytecodes::_tableswitch: {
             Bytecode_tableswitch tableswitch(this, bcs.bcp());
             for (int i = 0; i < tableswitch.length(); ++i) {
-              bci[SMF_method_cov_table_size] = bc_count;
+              bcis[SMF_method_cov_table_size] = bc_count;
               SMF_method_cov_table_size++;
             }
           }
@@ -201,6 +201,10 @@ void Method::check_SMF_method_cov_initialized() {
         offset_in_SMF_table = 0;
         offset_in_SMF_method_cov_hit_table = 0;
         SMF_method_cov_table_size = 0;
+      } else {
+        // copy the bcis to the SMF table.
+        int *SMF_table_branch_bcis = GetSunnyMilkFuzzerBranchBCIs() + offset_in_SMF_table;
+        memcpy(SMF_table_branch_bcis, bcis, SMF_method_cov_table_size * sizeof(int));
       }
     }
   }
@@ -210,7 +214,7 @@ int Method::find_SMF_table_offset_from_bci(int bci) {
   int result = -1;
   if (offset_in_SMF_table != -1 && SMF_method_cov_table_size != 0) {
     // binary search in SMF_table_branch_bcis.
-    int *SMF_table_branch_bcis = GetSunnyMilkFuzzerBranchBCIs() + 2; // skip the header.
+    int *SMF_table_branch_bcis = GetSunnyMilkFuzzerBranchBCIs() + offset_in_SMF_table;
     int low = 0;
     int high = SMF_method_cov_table_size;
     while (low < high) {
