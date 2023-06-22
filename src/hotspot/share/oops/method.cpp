@@ -169,6 +169,7 @@ void Method::check_SMF_method_cov_initialized() {
             bcis[SMF_method_cov_table_size] = bc_count;
             bcis[SMF_method_cov_table_size + 1] = bc_count;
             SMF_method_cov_table_size += 2;
+            break;
 
           case Bytecodes::_lookupswitch: {
             Bytecode_lookupswitch lookupswitch(this, bcs.bcp());
@@ -185,6 +186,7 @@ void Method::check_SMF_method_cov_initialized() {
               bcis[SMF_method_cov_table_size] = bc_count;
               SMF_method_cov_table_size++;
             }
+            break;
           }
           default:
             break;
