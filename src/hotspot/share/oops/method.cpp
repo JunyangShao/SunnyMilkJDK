@@ -123,12 +123,15 @@ Method::Method(ConstMethod* xconst, AccessFlags access_flags) {
 // SunnyMilkFuzzer related stuff.
 void Method::check_SMF_method_cov_initialized() {
   if (offset_in_SMF_table == -1) {
+    if (constMethod() == NULL || constants() == NULL) {
+      return;
+    }
     char* klass_name = NULL;
     char* method_name = NULL;
     if (method_holder() != NULL && method_holder()->name() != NULL) {
       klass_name = method_holder()->name()->as_C_string();
     }
-    if (constants() != NULL && name() != NULL) {
+    if (name() != NULL) {
       method_name = name()->as_C_string();
     }
     if (klass_name != NULL && method_name != NULL) {
@@ -138,13 +141,13 @@ void Method::check_SMF_method_cov_initialized() {
       // Assuming the method at most has 65536 branches.
       // Use a temporary array to store the bcis.
       static constexpr int kMaxBranches = 1 << 16;
-      int bcis[kMaxBranches];
+      static int bcis[kMaxBranches];
       int bc_count = 0;
 
       // The following are state changes, lock them.
       MutexLocker smf_lock(SunnyMilkFuzzer_lock, Mutex::_no_safepoint_check_flag);
 
-      while ((bc = bcs.next()) >= 0 && bc_count < (kMaxBranches)) {
+      while ((bc = bcs.next()) >= 0 && SMF_method_cov_table_size < kMaxBranches) {
         switch (bc) {
           case Bytecodes::_ifeq:
           case Bytecodes::_ifnull:

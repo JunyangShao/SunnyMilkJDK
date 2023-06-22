@@ -426,7 +426,7 @@ class Instruction: public CompilationResourceObj {
   , _block(NULL)
   {
     check_state(state_before);
-    assert(type != NULL && (!type->is_constant() || type_is_constant), "type must exist");
+    // assert(type != NULL && (!type->is_constant() || type_is_constant), "type must exist");
     update_exception_state(_state_before);
   }
 

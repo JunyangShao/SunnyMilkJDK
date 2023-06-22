@@ -1173,7 +1173,7 @@ class LIR_OpSMFMethodStart : public LIR_Op {
 
   virtual void emit_code(LIR_Assembler* masm);
   virtual LIR_OpSMFMethodStart* as_OpSMFMethodStart() { return this; }
-  virtual void print_instr(outputStream* out) const PRODUCT_RETURN;
+  virtual void print_instr(outputStream* out) const {};
 };
 
 // --------------------------------------------------

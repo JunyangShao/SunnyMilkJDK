@@ -1580,8 +1580,9 @@ void InterpreterMacroAssembler::profile_taken_branch(Register mdp,
   // and restore it later. we don't need to save callee-saved registers like rbcp or rbx.
   pusha();
   // push(rcx);
-  movl(mdp, 0);
-  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rcx, rbcp_smf, mdp);
+  movl(rscratch2, 0);
+  movptr(rscratch1, rcx);
+  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rscratch1, rbcp_smf, rscratch2);
   // pop(rcx);
   popa();
   
@@ -1627,8 +1628,8 @@ void InterpreterMacroAssembler::profile_not_taken_branch(Register mdp) {
   // SunnyMilkFuzzer save coverage
   pusha();
   get_method(rscratch1);
-  movl(mdp, 1);
-  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rscratch1, rbcp_smf, mdp);
+  movl(rscratch2, 1);
+  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rscratch1, rbcp_smf, rscratch2);
   popa();
 
   if (ProfileInterpreter) {
@@ -1987,7 +1988,8 @@ void InterpreterMacroAssembler::profile_switch_default(Register mdp) {
   // we don't need to save it here.
   pusha();
   get_method(rscratch1);
-  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rscratch1, rbcp_smf, mdp);
+  movl(rscratch2, mdp);
+  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rscratch1, rbcp_smf, rscratch2);
   popa();
   
   if (ProfileInterpreter) {
@@ -2030,9 +2032,10 @@ void InterpreterMacroAssembler::profile_switch_case(Register index,
   // rdx would be used later in the tableswitch/linearlookupswitch/binarylookupswitch,
   // save it.
   pusha();
-  get_method(reg2);
+  get_method(rscratch1);
+  movl(rscratch2, index);
   // push(rdx);
-  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), reg2, rbcp_smf, index);
+  call_VM(noreg, CAST_FROM_FN_PTR(address, SMF_tracer), rscratch1, rbcp_smf, rscratch2);
   // pop(rdx);
   popa();
 
