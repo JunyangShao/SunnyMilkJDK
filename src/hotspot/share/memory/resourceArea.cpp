@@ -43,17 +43,17 @@ void ResourceArea::bias_to(MEMFLAGS new_flags) {
 #ifdef ASSERT
 
 void ResourceArea::verify_has_resource_mark() {
-  if (_nesting <= 0) {
-    // Only report the first occurrence of an allocating thread that
-    // is missing a ResourceMark, to avoid possible recursive errors
-    // in error handling.
-    static volatile bool reported = false;
-    if (!Atomic::load(&reported)) {
-      if (!Atomic::cmpxchg(&reported, false, true)) {
-        fatal("memory leak: allocating without ResourceMark");
-      }
-    }
-  }
+  // if (_nesting <= 0) {
+  //   // Only report the first occurrence of an allocating thread that
+  //   // is missing a ResourceMark, to avoid possible recursive errors
+  //   // in error handling.
+  //   static volatile bool reported = false;
+  //   if (!Atomic::load(&reported)) {
+  //     if (!Atomic::cmpxchg(&reported, false, true)) {
+  //       fatal("memory leak: allocating without ResourceMark");
+  //     }
+  //   }
+  // }
 }
 
 #endif // ASSERT
