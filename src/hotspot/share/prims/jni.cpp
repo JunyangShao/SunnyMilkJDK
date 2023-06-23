@@ -117,6 +117,7 @@ static constexpr size_t kSMFNameMaxLength = 256;
 struct SMFMethodCovTableEntry {
     char klass_name[kSMFNameMaxLength] = {0};
     char method_name[kSMFNameMaxLength] = {0};
+    char method_signature[kSMFNameMaxLength] = {0};
     int cov_tbl_size = 0;
     int offset_in_SMF_table = 0;
     int offset_in_SMF_method_cov_hit_table = 0;
@@ -163,11 +164,38 @@ void SMF_default_tracer(uintptr_t method_ptr, uintptr_t bcp, uintptr_t offset_in
   Method* method = reinterpret_cast<Method*>(method_ptr);
   if (SMF_begin) {
     method->check_SMF_method_cov_initialized();
-    int offset_in_SMF_table = method->find_SMF_table_offset_from_bcp(reinterpret_cast<address>(bcp));
+    address bcp_addr = reinterpret_cast<address>(bcp);
+    auto bc = Bytecodes::java_code_at(method, bcp_addr);
+    int offset_in_SMF_table = method->find_SMF_table_offset_from_bcp(bcp_addr);
     // tty->print_cr("SMF_default_tracer: offset_in_SMF_table = %d", offset_in_SMF_table);
     if (offset_in_SMF_table != -1) {
       SMF_table[method->offset_in_SMF_table + offset_in_SMF_table + offset_in_bytecode]++;
       SMF_method_cov_hit_table[method->offset_in_SMF_method_cov_hit_table] = 1;
+      // if (bc == Bytecodes::_tableswitch || bc == Bytecodes::_lookupswitch) {
+      //   tty->print_cr("[SMF]\t SMF_default_tracer: %s.%s.%s switch, offset = %ld, bci = %d",
+      //     method->klass_name()->as_C_string(), method->name()->as_C_string(),
+      //     method->signature()->as_C_string(),
+      //     offset_in_bytecode, method->bci_from(bcp_addr));
+      // }
+    } else {
+      // if (bc != Bytecodes::_goto && bc != Bytecodes::_goto_w &&
+      //     bc != Bytecodes::_jsr && bc != Bytecodes::_jsr_w) {
+      //   tty->print_cr("[SMF]\t SMF_default_tracer: %s.%s.%s has branch not found, bci = %d, code = %d,"
+      //                 " offset_in_SMF_table = %d, offset_in_method_hit_table = %d, method_size = %d"   
+      //      ,
+      //      method->klass_name()->as_C_string(), method->name()->as_C_string(),
+      //      method->signature()->as_C_string(),
+      //      method->bci_from(bcp_addr), bc,
+      //      method->offset_in_SMF_table,
+      //      method->offset_in_SMF_method_cov_hit_table,
+      //      method->SMF_method_cov_table_size
+      //      );
+      //   int *SMF_table_branch_bcis = GetSunnyMilkFuzzerBranchBCIs() + method->offset_in_SMF_table;
+      //   for (int i = 0; i < method->SMF_method_cov_table_size; i++) {
+      //     tty->print("%d ", SMF_table_branch_bcis[i]);
+      //   }
+      //   tty->print_cr("");
+      // }
     }
   }
 }
@@ -206,7 +234,8 @@ int GetSunnyMilkFuzzerMethodNumber() {
   return SMFMethodCovTableValidSize;
 }
 
-int SMFHash(const char* klass_name, const char* method_name, size_t klass_name_len, size_t method_name_len) {
+int SMFHash(const char* klass_name, const char* method_name, const char* method_signature,
+            size_t klass_name_len, size_t method_name_len, size_t method_signature_len) {
   int hash = 0;
 
   for (size_t i = 0; i < klass_name_len; i++) {
@@ -215,14 +244,18 @@ int SMFHash(const char* klass_name, const char* method_name, size_t klass_name_l
   for (size_t i = 0; i < method_name_len; i++) {
       hash += klass_name[i];
   }
+  for (size_t i = 0; i < method_signature_len; i++) {
+      hash += method_signature[i];
+  }
 
   return hash & kSMFMethodCovTableSizeMASK;
 }
 
 // get or insert a method into the method coverage table, with a size 
 // return the offset in the SMF_table and SMF_method_cov_hit_table.
-unsigned long long SMFMethodCovTableGetOrInsert(const char* klass_name, const char* method_name,
-                              size_t klass_name_len, size_t method_name_len,
+unsigned long long SMFMethodCovTableGetOrInsert(
+                              const char* klass_name, const char* method_name, const char* method_signature,
+                              size_t klass_name_len, size_t method_name_len, size_t method_signature_len,
                               int cov_tbl_size) {
   // tty->print_cr("SMFMethodCovTableGetOrInsert: %s %s %d %d %ld %p %p %p %p",
   //   klass_name, method_name, cov_tbl_size, SMFMethodCovTableValidSize, SMFTableValidSize,
@@ -230,8 +263,10 @@ unsigned long long SMFMethodCovTableGetOrInsert(const char* klass_name, const ch
   //   SMF_table);
   klass_name_len = klass_name_len < kSMFNameMaxLength ? klass_name_len : kSMFNameMaxLength;
   method_name_len = method_name_len < kSMFNameMaxLength ? method_name_len : kSMFNameMaxLength;
+  method_signature_len = method_signature_len < kSMFNameMaxLength ? method_signature_len : kSMFNameMaxLength;
   cov_tbl_size = (7 + cov_tbl_size) & ~7; // Align with 8
-  int index = SMFHash(klass_name, method_name, klass_name_len, method_name_len);
+
+  int index = SMFHash(klass_name, method_name, method_signature, klass_name_len, method_name_len, method_signature_len);
   
   int start_index = index;
   // search status: 0 - not found, 1 - found empty slot, 2 - found existing slot
@@ -240,8 +275,10 @@ unsigned long long SMFMethodCovTableGetOrInsert(const char* klass_name, const ch
     if (!SMF_method_cov_table[index].in_use) {
       search_status = 1;
       break;
-    } else if (memcmp(SMF_method_cov_table[index].klass_name, klass_name,
-        klass_name_len) == 0 && memcmp(SMF_method_cov_table[index].method_name, method_name, method_name_len) == 0) {
+    } else if (
+        strcmp(SMF_method_cov_table[index].klass_name, klass_name) == 0 &&
+        strcmp(SMF_method_cov_table[index].method_name, method_name) == 0 &&
+        strcmp(SMF_method_cov_table[index].method_signature, method_signature) == 0) {
       search_status = 2;
       break;
     } else {
@@ -254,6 +291,7 @@ unsigned long long SMFMethodCovTableGetOrInsert(const char* klass_name, const ch
     // Set the SMF_method_cov_table
     memcpy(SMF_method_cov_table[index].klass_name, klass_name, klass_name_len);
     memcpy(SMF_method_cov_table[index].method_name, method_name, method_name_len);
+    memcpy(SMF_method_cov_table[index].method_signature, method_signature, method_signature_len);
     SMF_method_cov_table[index].cov_tbl_size = cov_tbl_size;
     SMF_method_cov_table[index].offset_in_SMF_table = SMFTableValidSize;
     SMF_method_cov_table[index].in_use = true;

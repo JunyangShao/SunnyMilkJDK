@@ -130,13 +130,17 @@ void Method::check_SMF_method_cov_initialized() {
     }
     char* klass_name = NULL;
     char* method_name = NULL;
+    char* method_signature = NULL;
     if (method_holder() != NULL && method_holder()->name() != NULL) {
       klass_name = method_holder()->name()->as_C_string();
     }
     if (name() != NULL) {
       method_name = name()->as_C_string();
     }
-    if (klass_name != NULL && method_name != NULL) {
+    if (signature() != NULL) {
+      method_signature = signature()->as_C_string();
+    }
+    if (klass_name != NULL && method_name != NULL && method_signature != NULL) {
       BytecodeStream bcs(methodHandle(Thread::current(), this));
       Bytecodes::Code bc;
       // **** Imporatant ****
@@ -195,10 +199,11 @@ void Method::check_SMF_method_cov_initialized() {
         // Since its size is also 0, it will not have any impact for
         // find_SMF_table_offset_from_bci/bcp. The method is effectively nullified.
         offset_in_SMF_table = 0;
+        // tty->print_cr("[SMF]\t Method: %s.%s.%s has no branches.", klass_name, method_name, method_signature);
       }
       unsigned long long encoded_ret = 
-        SMFMethodCovTableGetOrInsert(klass_name, method_name,
-        strlen(klass_name), strlen(method_name), SMF_method_cov_table_size);
+        SMFMethodCovTableGetOrInsert(klass_name, method_name, method_signature,
+        strlen(klass_name), strlen(method_name), strlen(method_signature), SMF_method_cov_table_size);
       offset_in_SMF_table = (int) (encoded_ret >> 32);
       offset_in_SMF_method_cov_hit_table = (int) (encoded_ret);
       if (offset_in_SMF_table == -1) {
@@ -206,15 +211,19 @@ void Method::check_SMF_method_cov_initialized() {
         offset_in_SMF_table = 0;
         offset_in_SMF_method_cov_hit_table = 0;
         SMF_method_cov_table_size = 0;
+        // tty->print_cr("[SMF]\t Method: %s.%s.%s insertion failed.", klass_name, method_name, method_signature);
       } else {
         // copy the bcis to the SMF table.
         int *SMF_table_branch_bcis = GetSunnyMilkFuzzerBranchBCIs() + offset_in_SMF_table;
         memcpy(SMF_table_branch_bcis, bcis, SMF_method_cov_table_size * sizeof(int));
-        // tty->print_cr("[SMF]\t BCIs for method: %s, %s is: ", klass_name, method_name);
+        // tty->print_cr("[SMF]\t BCIs and codes for method: %s.%s.%s is: ", klass_name, method_name, method_signature);
         // for (int i = 0; i < SMF_method_cov_table_size; i++) {
         //   tty->print("%d ", SMF_table_branch_bcis[i]);
         // }
         // tty->print_cr("");
+        // print_codes();
+        // int cov_tbl_size = (7 + SMF_method_cov_table_size) & ~7;
+        // tty->print_cr("Method table range = [%d, %d]", offset_in_SMF_table, offset_in_SMF_table + cov_tbl_size - 1);
       }
     }
   }
@@ -245,6 +254,7 @@ int Method::find_SMF_table_offset_from_bci(int bci) {
 
 int Method::find_SMF_table_offset_from_bcp(address bcp) {
   int bci = bci_from(bcp);
+  // tty->print_cr("[SMF]\t bcp: %p, bci: %d", bcp, bci);
   return find_SMF_table_offset_from_bci(bci);
 }
 

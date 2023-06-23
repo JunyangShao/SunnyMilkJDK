@@ -44,8 +44,8 @@ void SMF_tracer(void* thread, Method* method, uintptr_t bcp, uintptr_t offset_in
 extern unsigned char* GetSunnyMilkFuzzerCoverage();
 extern int* GetSunnyMilkFuzzerBranchBCIs();
 extern unsigned long long SMFMethodCovTableGetOrInsert
-                              (const char* klass_name, const char* method_name,
-                              size_t klass_name_len, size_t method_name_len,
+                              (const char* klass_name, const char* method_name, const char* method_signature,
+                              size_t klass_name_len, size_t method_name_len, size_t method_signature_len,
                               int cov_tbl_size);
 unsigned char* GetSunnyMilkFuzzerMethodHitTable();
 uint16_t GetLibFuzzerFeatureAt(int index, int offset);
