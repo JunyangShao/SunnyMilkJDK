@@ -122,6 +122,8 @@ Method::Method(ConstMethod* xconst, AccessFlags access_flags) {
 
 // SunnyMilkFuzzer related stuff.
 void Method::check_SMF_method_cov_initialized() {
+  // The following are state changes, lock them.
+  MutexLocker smf_lock(SunnyMilkFuzzer_lock, Mutex::_no_safepoint_check_flag);
   if (offset_in_SMF_table == -1) {
     if (constMethod() == NULL || constants() == NULL) {
       return;
@@ -142,9 +144,6 @@ void Method::check_SMF_method_cov_initialized() {
       // Use a temporary array to store the bcis.
       static constexpr int kMaxBranches = 1 << 16;
       static int bcis[kMaxBranches];
-
-      // The following are state changes, lock them.
-      MutexLocker smf_lock(SunnyMilkFuzzer_lock, Mutex::_no_safepoint_check_flag);
 
       while ((bc = bcs.next()) >= 0 && SMF_method_cov_table_size < kMaxBranches) {
         switch (bc) {
@@ -222,11 +221,9 @@ void Method::check_SMF_method_cov_initialized() {
 }
 
 int Method::find_SMF_table_offset_from_bci(int bci) {
-  {
-    // The check might interfere with check_SMF_method_cov_initialized(), lock it.
-    MutexLocker smf_lock(SunnyMilkFuzzer_lock, Mutex::_no_safepoint_check_flag);
-    if (offset_in_SMF_table == -1 || SMF_method_cov_table_size == 0) return -1;
-  }
+  // The check might interfere with check_SMF_method_cov_initialized(), lock it.
+  MutexLocker smf_lock(SunnyMilkFuzzer_lock, Mutex::_no_safepoint_check_flag);
+  if (offset_in_SMF_table == -1 || SMF_method_cov_table_size == 0) return -1;
   int result = -1;
   // binary search in SMF_table_branch_bcis.
   int *SMF_table_branch_bcis = GetSunnyMilkFuzzerBranchBCIs() + offset_in_SMF_table;

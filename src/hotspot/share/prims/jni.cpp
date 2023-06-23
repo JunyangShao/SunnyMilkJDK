@@ -224,7 +224,10 @@ int SMFHash(const char* klass_name, const char* method_name, size_t klass_name_l
 unsigned long long SMFMethodCovTableGetOrInsert(const char* klass_name, const char* method_name,
                               size_t klass_name_len, size_t method_name_len,
                               int cov_tbl_size) {
-  // tty->print_cr("SMFMethodCovTableGetOrInsert: %s %s %d", klass_name, method_name, cov_tbl_size);
+  // tty->print_cr("SMFMethodCovTableGetOrInsert: %s %s %d %d %ld %p %p %p %p",
+  //   klass_name, method_name, cov_tbl_size, SMFMethodCovTableValidSize, SMFTableValidSize,
+  //   SMF_method_cov_table, SMF_method_cov_hit_table, SMF_method_cov_size_table,
+  //   SMF_table);
   klass_name_len = klass_name_len < kSMFNameMaxLength ? klass_name_len : kSMFNameMaxLength;
   method_name_len = method_name_len < kSMFNameMaxLength ? method_name_len : kSMFNameMaxLength;
   cov_tbl_size = (7 + cov_tbl_size) & ~7; // Align with 8

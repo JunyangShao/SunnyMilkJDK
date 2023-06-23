@@ -2851,14 +2851,25 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
     // SunnyMilkFuzzer - bytecode pointer
     // address smf_bcp = method()->get_Method()->bcp_from(s.cur_bci());
 
-    if (scope_data()->is_method_start()) {
-      scope_data()->unset_is_method_start();
-      SMFMethodStart* smf_method_start = new SMFMethodStart();
-      // smf_method_start->set_smf_method(method()->get_Method()->bcp_from(0));
-      smf_method_start->set_smf_method(GetSunnyMilkFuzzerCoverage() + 
-                        method()->get_Method()->offset_in_SMF_method_cov_hit_table);
-      append(smf_method_start);
-      scope_data()->set_smf_method_start(smf_method_start);
+    // if (scope_data()->is_method_start()) {
+    //   scope_data()->unset_is_method_start();
+    //   SMFMethodStart* smf_method_start = new SMFMethodStart();
+    //   // smf_method_start->set_smf_method(method()->get_Method()->bcp_from(0));
+    //   smf_method_start->set_smf_method(GetSunnyMilkFuzzerCoverage() + 
+    //                     method()->get_Method()->offset_in_SMF_method_cov_hit_table);
+    //   append(smf_method_start);
+    //   scope_data()->set_smf_method_start(smf_method_start);
+    // }
+
+    // Use a state variable in compilation() to indicate the start of a method
+    // the method hit will be emitted for the *first effective branch*
+    compilation()->set_smf_method_hit_emitted(false);
+    // method()->get_Method()->check_SMF_method_cov_initialized();
+    int smf_method_hit_offset = method()->get_Method()->offset_in_SMF_method_cov_hit_table;
+    int smf_method_size = method()->get_Method()->SMF_method_cov_table_size;
+    int smf_offset = method()->get_Method()->offset_in_SMF_table;
+    if (smf_method_hit_offset >= 0 && smf_method_size > 0 && smf_offset >= 0) {
+      compilation()->set_smf_method_hit_addr(GetSunnyMilkFuzzerMethodHitTable() + smf_method_hit_offset);
     }
 
     // handle bytecode
@@ -3115,9 +3126,9 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
 
 
 void GraphBuilder::iterate_all_blocks(bool start_in_current_block_for_inlining) {
-  scope_data()->set_is_method_start();
-  scope_data()->set_smf_method_start(NULL);
-  scope_data()->unset_has_branch();
+  // scope_data()->set_is_method_start();
+  // scope_data()->set_smf_method_start(NULL);
+  // scope_data()->unset_has_branch();
   do {
     if (start_in_current_block_for_inlining && !bailed_out()) {
       iterate_bytecodes_for_block(0);
@@ -3140,9 +3151,9 @@ void GraphBuilder::iterate_all_blocks(bool start_in_current_block_for_inlining) 
       }
     }
   } while (!bailed_out() && !scope_data()->is_work_list_empty());
-  if (!bailed_out() && scope_data()->has_branch() && scope_data()->smf_method_start() != NULL) {
-    scope_data()->smf_method_start()->set_is_nontrivial();
-  }
+  // if (!bailed_out() && scope_data()->has_branch() && scope_data()->smf_method_start() != NULL) {
+  //   scope_data()->smf_method_start()->set_is_nontrivial();
+  // }
 }
 
 

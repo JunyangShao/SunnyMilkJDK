@@ -95,6 +95,10 @@ class Compilation: public StackObj {
   bool               _has_access_indexed;
   int                _interpreter_frame_size; // Stack space needed in case of a deoptimization
 
+  // For SunnyMilkFuzzer use.
+  bool               _smf_method_hit_emitted = false;
+  address            _smf_method_hit_addr = NULL;
+
   // compilation helpers
   void initialize();
   void build_hir();
@@ -129,6 +133,20 @@ class Compilation: public StackObj {
 
   static Compilation* current() {
     return (Compilation*) ciEnv::current()->compiler_data();
+  }
+
+  // For SunnyMilkFuzzer
+  void set_smf_method_hit_emitted(bool emitted) {
+    _smf_method_hit_emitted = emitted;
+  }
+  bool smf_method_hit_emitted() {
+    return _smf_method_hit_emitted;
+  }
+  void set_smf_method_hit_addr(address addr) {
+    _smf_method_hit_addr = addr;
+  }
+  address smf_method_hit_addr() {
+    return _smf_method_hit_addr;
   }
 
   // accessors
