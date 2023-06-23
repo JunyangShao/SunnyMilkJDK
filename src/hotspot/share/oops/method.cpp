@@ -142,7 +142,6 @@ void Method::check_SMF_method_cov_initialized() {
       // Use a temporary array to store the bcis.
       static constexpr int kMaxBranches = 1 << 16;
       static int bcis[kMaxBranches];
-      int bc_count = 0;
 
       // The following are state changes, lock them.
       MutexLocker smf_lock(SunnyMilkFuzzer_lock, Mutex::_no_safepoint_check_flag);
@@ -166,8 +165,8 @@ void Method::check_SMF_method_cov_initialized() {
           case Bytecodes::_if_acmpeq:
           case Bytecodes::_if_acmpne:
             // each normal branch has two 8-bit counters.
-            bcis[SMF_method_cov_table_size] = bc_count;
-            bcis[SMF_method_cov_table_size + 1] = bc_count;
+            bcis[SMF_method_cov_table_size] = bcs.bci();
+            bcis[SMF_method_cov_table_size + 1] = bcs.bci();
             SMF_method_cov_table_size += 2;
             break;
 
@@ -175,15 +174,15 @@ void Method::check_SMF_method_cov_initialized() {
             Bytecode_lookupswitch lookupswitch(this, bcs.bcp());
             // each lookupswitch has 1 + number_of_pairs 8-bit counters.
             for (int i = 0; i < lookupswitch.number_of_pairs() + 1; ++i) {
-              bcis[SMF_method_cov_table_size] = bc_count;
+              bcis[SMF_method_cov_table_size] = bcs.bci();
               SMF_method_cov_table_size++;
             }
             break;
           }
           case Bytecodes::_tableswitch: {
             Bytecode_tableswitch tableswitch(this, bcs.bcp());
-            for (int i = 0; i < tableswitch.length(); ++i) {
-              bcis[SMF_method_cov_table_size] = bc_count;
+            for (int i = 0; i < tableswitch.length() + 1; ++i) {
+              bcis[SMF_method_cov_table_size] = bcs.bci();
               SMF_method_cov_table_size++;
             }
             break;
@@ -191,7 +190,6 @@ void Method::check_SMF_method_cov_initialized() {
           default:
             break;
         }
-        bc_count++;
       }
       if (SMF_method_cov_table_size == 0) {
         // Set it to be 0 to indicate that this method has been checked.
@@ -213,6 +211,11 @@ void Method::check_SMF_method_cov_initialized() {
         // copy the bcis to the SMF table.
         int *SMF_table_branch_bcis = GetSunnyMilkFuzzerBranchBCIs() + offset_in_SMF_table;
         memcpy(SMF_table_branch_bcis, bcis, SMF_method_cov_table_size * sizeof(int));
+        // tty->print_cr("[SMF]\t BCIs for method: %s, %s is: ", klass_name, method_name);
+        // for (int i = 0; i < SMF_method_cov_table_size; i++) {
+        //   tty->print("%d ", SMF_table_branch_bcis[i]);
+        // }
+        // tty->print_cr("");
       }
     }
   }

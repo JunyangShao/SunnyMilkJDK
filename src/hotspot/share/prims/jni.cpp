@@ -164,6 +164,7 @@ void SMF_default_tracer(uintptr_t method_ptr, uintptr_t bcp, uintptr_t offset_in
   if (SMF_begin) {
     method->check_SMF_method_cov_initialized();
     int offset_in_SMF_table = method->find_SMF_table_offset_from_bcp(reinterpret_cast<address>(bcp));
+    // tty->print_cr("SMF_default_tracer: offset_in_SMF_table = %d", offset_in_SMF_table);
     if (offset_in_SMF_table != -1) {
       SMF_table[method->offset_in_SMF_table + offset_in_SMF_table + offset_in_bytecode]++;
       SMF_method_cov_hit_table[method->offset_in_SMF_method_cov_hit_table] = 1;
@@ -223,6 +224,7 @@ int SMFHash(const char* klass_name, const char* method_name, size_t klass_name_l
 unsigned long long SMFMethodCovTableGetOrInsert(const char* klass_name, const char* method_name,
                               size_t klass_name_len, size_t method_name_len,
                               int cov_tbl_size) {
+  // tty->print_cr("SMFMethodCovTableGetOrInsert: %s %s %d", klass_name, method_name, cov_tbl_size);
   klass_name_len = klass_name_len < kSMFNameMaxLength ? klass_name_len : kSMFNameMaxLength;
   method_name_len = method_name_len < kSMFNameMaxLength ? method_name_len : kSMFNameMaxLength;
   cov_tbl_size = (7 + cov_tbl_size) & ~7; // Align with 8
