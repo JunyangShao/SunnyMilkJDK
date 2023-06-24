@@ -200,6 +200,7 @@ void Method::check_SMF_method_cov_initialized() {
         // find_SMF_table_offset_from_bci/bcp. The method is effectively nullified.
         offset_in_SMF_table = 0;
         // tty->print_cr("[SMF]\t Method: %s.%s.%s has no branches.", klass_name, method_name, method_signature);
+        return;
       }
       unsigned long long encoded_ret = 
         SMFMethodCovTableGetOrInsert(klass_name, method_name, method_signature,
@@ -223,7 +224,8 @@ void Method::check_SMF_method_cov_initialized() {
         // tty->print_cr("");
         // print_codes();
         // int cov_tbl_size = (7 + SMF_method_cov_table_size) & ~7;
-        // tty->print_cr("Method table range = [%d, %d]", offset_in_SMF_table, offset_in_SMF_table + cov_tbl_size - 1);
+        // tty->print_cr("Method table range = [%d, %d], valid size = %d",
+        //   offset_in_SMF_table, offset_in_SMF_table + cov_tbl_size - 1, SMF_method_cov_table_size);
       }
     }
   }
@@ -249,6 +251,7 @@ int Method::find_SMF_table_offset_from_bci(int bci) {
     else
       high = mid;
   }
+  // tty->print_cr("[SMF]\t got offset result: %d", result);
   return result;
 }
 

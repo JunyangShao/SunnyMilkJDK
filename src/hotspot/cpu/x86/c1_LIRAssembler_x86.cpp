@@ -1459,6 +1459,7 @@ void LIR_Assembler::emit_op3(LIR_Op3* op) {
 // }
 
 void LIR_Assembler::emit_smf_probe_helper(address smf_8bit_counter_idx) {
+  // tty->print_cr("[SMF]\t smf_8bit_counter_Addr = %p", smf_8bit_counter_idx);
   __ lea(rscratch1, AddressLiteral(smf_8bit_counter_idx, relocInfo::none));
   __ incrementb(Address(rscratch1, 0));
 }

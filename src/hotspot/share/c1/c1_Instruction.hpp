@@ -2001,7 +2001,7 @@ LEAF(If, BlockEnd)
   int       _smf_probe_status = 3;
   // address       _smf_bcp = NULL;
   // address       _smf_method = NULL;
-  address          _smf_8bit_counter_idx;
+  address          _smf_8bit_counter_idx = NULL;
   
  public:
   // creation
@@ -2133,7 +2133,7 @@ BASE(Switch, BlockEnd)
   int       _smf_probe_status = 3;
   // address       _smf_bcp = NULL;
   // address       _smf_method = NULL;
-  address          _smf_8bit_counter_idx;
+  address          _smf_8bit_counter_idx = NULL;
 
  public:
   // creation

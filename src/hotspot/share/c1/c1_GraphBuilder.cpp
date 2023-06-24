@@ -1510,6 +1510,7 @@ If* GraphBuilder::if_node_smf(If* cur_if_node, int smf_bci) {
     }
     cur_if_node->set_smf_8bit_counter_idx(GetSunnyMilkFuzzerCoverage() + probe1_idx);
   }
+  // tty->print_cr("[SMF]\t If node: SMF_table = %p, offset = %d", GetSunnyMilkFuzzerCoverage(), smf_bci);
   return cur_if_node;
 }
 
@@ -2864,7 +2865,7 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
     // Use a state variable in compilation() to indicate the start of a method
     // the method hit will be emitted for the *first effective branch*
     compilation()->set_smf_method_hit_emitted(false);
-    // method()->get_Method()->check_SMF_method_cov_initialized();
+    method()->get_Method()->check_SMF_method_cov_initialized();
     int smf_method_hit_offset = method()->get_Method()->offset_in_SMF_method_cov_hit_table;
     int smf_method_size = method()->get_Method()->SMF_method_cov_table_size;
     int smf_offset = method()->get_Method()->offset_in_SMF_table;
