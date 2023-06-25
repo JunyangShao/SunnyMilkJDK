@@ -1480,25 +1480,26 @@ If* GraphBuilder::if_node_smf(If* cur_if_node, int smf_bci) {
   // return cur_if_node;
   if (cur_if_node != NULL) {
     int probe1_idx = method()->get_Method()->find_SMF_table_offset_from_bci(smf_bci);
-    if (probe1_idx == -1) return cur_if_node;
+    if (probe1_idx == -1) {
+      // tty->print_cr("[SMF]\t C1 JIT compiler cannot find the branch offset for an If node.");
+      return cur_if_node;
+    }
     int probe2_idx = probe1_idx + 1;
     probe1_idx += method()->get_Method()->offset_in_SMF_table;
     probe2_idx += method()->get_Method()->offset_in_SMF_table;
-    bool probe1_exhausted = true;
-    bool probe2_exhausted = true;
+    int probe1_exhausted = 1;
+    int probe2_exhausted = 1;
     for (int i = 0; i < 8; ++i) {
       if (GetLibFuzzerFeatureAt(probe1_idx, i) == 0) {
-        probe1_exhausted = false;
-        break;
+        --probe1_exhausted;
       }
     }
     for (int i = 0; i < 8; ++i) {
       if (GetLibFuzzerFeatureAt(probe2_idx, i) == 0) {
-        probe2_exhausted = false;
-        break;
+        --probe2_exhausted;
       }
     }
-    if (probe1_exhausted && probe2_exhausted) {
+    if (probe1_exhausted > 0 && probe2_exhausted > 0) {
       // exhausted.
       cur_if_node->set_smf_probe_status(3);
     } else if (probe2_exhausted) {
@@ -1551,16 +1552,18 @@ Switch* GraphBuilder::switch_node_smf(Switch* cur_switch_node, int smf_bci) {
   // return cur_switch_node;
   if (cur_switch_node != NULL) {
     int probe_start_idx = method()->get_Method()->find_SMF_table_offset_from_bci(smf_bci);
-    if (probe_start_idx == -1) return cur_switch_node;
+    if (probe_start_idx == -1) {
+      // tty->print_cr("[SMF]\t C1 JIT compiler cannot find the branch offset for an Switch node.");
+      return cur_switch_node;
+    }
     int probe_default_idx = probe_start_idx + cur_switch_node->length();
     probe_start_idx += method()->get_Method()->offset_in_SMF_table;
     probe_default_idx += method()->get_Method()->offset_in_SMF_table;
-    bool probe_default_exhausted = true;
+    int probe_default_exhausted = 1;
     bool probe_case_exhausted = true;
     for (int i = 0; i < 8; ++i) {
       if (GetLibFuzzerFeatureAt(probe_default_idx, i) == 0) {
-        probe_default_exhausted = false;
-        break;
+        --probe_default_exhausted;
       }
     }
     for (int i = 0; i < cur_switch_node->length(); ++i) {
@@ -1573,7 +1576,7 @@ Switch* GraphBuilder::switch_node_smf(Switch* cur_switch_node, int smf_bci) {
       }
       if (!probe_case_exhausted) break;
     }
-    if (probe_case_exhausted && probe_default_exhausted) {
+    if (probe_case_exhausted && probe_default_exhausted > 0) {
       // exhausted.
       cur_switch_node->set_smf_probe_status(3);
     } else if (probe_default_exhausted) {
@@ -2865,7 +2868,7 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
     // Use a state variable in compilation() to indicate the start of a method
     // the method hit will be emitted for the *first effective branch*
     compilation()->set_smf_method_hit_emitted(false);
-    method()->get_Method()->check_SMF_method_cov_initialized();
+    // method()->get_Method()->check_SMF_method_cov_initialized();
     int smf_method_hit_offset = method()->get_Method()->offset_in_SMF_method_cov_hit_table;
     int smf_method_size = method()->get_Method()->SMF_method_cov_table_size;
     int smf_offset = method()->get_Method()->offset_in_SMF_table;

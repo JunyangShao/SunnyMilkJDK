@@ -793,7 +793,7 @@ struct JNINativeInterface_ {
 
     size_t (* GetSunnyMilkFuzzerCoverageSize)();
 
-    void (* SetLibFuzzerFeatureMap)(uint16_t*);
+    void (* SetLibFuzzerFeatureMap)(uint32_t*);
 };
 
 /*
@@ -1933,7 +1933,7 @@ struct JNIEnv_ {
       return functions->GetSunnyMilkFuzzerCoverageSize();
     }
 
-    void SetLibFuzzerFeatureMap(uint16_t* feature_map) {
+    void SetLibFuzzerFeatureMap(uint32_t* feature_map) {
       return functions->SetLibFuzzerFeatureMap(feature_map);
     }
 

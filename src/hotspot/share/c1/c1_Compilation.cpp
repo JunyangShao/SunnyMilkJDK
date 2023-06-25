@@ -480,6 +480,7 @@ void Compilation::compile_method() {
     log()->code_cache_state();
 
   totalInstructionNodes += Instruction::number_of_instructions();
+  // print_bytecodes();
 }
 
 

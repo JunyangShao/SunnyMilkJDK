@@ -1493,7 +1493,7 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
   if (op->cond() == lir_cond_always) {
     if (op->info() != NULL) add_debug_info_for_branch(op->info());
     if (IsCurrentMethodInteresting() && op->smf_probe_status() == 2) {
-      check_smf_method_hit_emission();
+      // check_smf_method_hit_emission();
       // SunnyMilkFuzzer special case for probes in Switch
       // For default case, the jump needs to be recorded.
       // emit_smf_probe_helper(op->smf_bcp(), op->smf_method());
@@ -1558,6 +1558,7 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
     }
     // static uintptr_t br_counter = 0;
     if (IsCurrentMethodInteresting() && op->smf_probe_status() == 0) {
+
       // Boolean flag solution.
       // __ lea(rscratch1, AddressLiteral(GetSunnyMilkFuzzerCoverage(), relocInfo::none));
       // __ movb(Address(rscratch1, br_counter & SMFTableMaxSizeMask), 1);
@@ -1574,7 +1575,8 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
       // In this solution, we assume that FLAGAS register is always used tightly,
       // That is, there is no gap between the usage of a flag bit before the instruction setting the flag bit.
       // Please comment out the `__ jcc(acond,*(op->label()));` below when using this solution.
-      check_smf_method_hit_emission();
+
+      // check_smf_method_hit_emission();
       Label not_taken;
       __ jcc(acond_rev, not_taken);
       // emit_smf_probe_helper(op->smf_bcp(), op->smf_method());
@@ -1584,13 +1586,13 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
       // emit_smf_probe_helper(op->smf_bcp() + 1, op->smf_method());
       emit_smf_probe_helper(op->smf_8bit_counter_idx() + 1);
     } else if (IsCurrentMethodInteresting() && op->smf_probe_status() == 1) {
-      check_smf_method_hit_emission();
+      // check_smf_method_hit_emission();
       // taken exhausted
       __ jcc(acond,*(op->label()));
       // emit_smf_probe_helper(op->smf_bcp() + 1, op->smf_method());
       emit_smf_probe_helper(op->smf_8bit_counter_idx() + 1);
     } else if (IsCurrentMethodInteresting() && op->smf_probe_status() == 2) {
-      check_smf_method_hit_emission();
+      // check_smf_method_hit_emission();
       // not taken exhaused
       Label not_taken;
       __ jcc(acond_rev, not_taken);

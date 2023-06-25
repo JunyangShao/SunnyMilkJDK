@@ -149,6 +149,60 @@ class Compilation: public StackObj {
     return _smf_method_hit_addr;
   }
 
+  void SMFreplaceChar(char* str, char find, char replace) {
+      if (str == NULL)
+          return;
+
+      while (*str != '\0') {
+          if (*str == find)
+              *str = replace;
+
+          str++;
+      }
+  }
+
+  void print_bytecodes() {
+    ResourceMark rm;
+    MutexLocker ml(SunnyMilkFuzzer_lock, Mutex::_no_safepoint_check_flag);
+    if (_method == NULL) {
+      return;
+    }
+    Method* method = _method->get_Method();
+    if (method == NULL) {
+      return;
+    }
+    if (method->constMethod() == NULL || method->constants() == NULL) {
+      return;
+    }
+    char* klass_name = NULL;
+    char* method_name = NULL;
+    char* method_signature = NULL;
+    if (method->method_holder() != NULL && method->method_holder()->name() != NULL) {
+      klass_name = method->method_holder()->name()->as_C_string();
+    }
+    if (method->name() != NULL) {
+      method_name = method->name()->as_C_string();
+    }
+    if (method->signature() != NULL) {
+      method_signature = method->signature()->as_C_string();
+    }
+    if (klass_name != NULL && method_name != NULL && method_signature != NULL) {
+      char fname[1024] = {0};
+      snprintf(fname, sizeof(fname), 
+        "/home/junyangshao/Desktop/playground/research/SunnyMilkFuzzerJDK/benchmark/fuzzer-finder/smf_out/%s.%s.%s.%p",
+        klass_name, method_name, method_signature, method);
+      SMFreplaceChar(fname + 98, '/', '.');
+      auto thefile = fopen(fname, "a");
+      if (thefile == NULL) {
+        return;
+      }
+      fileStream fs(thefile);
+      fs.print_cr("[SMF]\t Method being compiled: %s.%s.%s, printing bytecodes...",
+        klass_name, method_name, method_signature);
+      method->print_codes_on(&fs);
+    }
+  }
+
   // accessors
   ciEnv* env() const                             { return _env; }
   DirectiveSet* directive() const                { return _directive; }

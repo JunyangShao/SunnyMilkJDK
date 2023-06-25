@@ -131,7 +131,7 @@ int SMF_method_cov_size_table[kSMFMethodCovTableSize] = {0};
 unsigned char SMF_method_cov_hit_table[kSMFMethodCovTableSize] = {0};
 int SMFMethodCovTableValidSize = 0;
 
-uint16_t *libFuzzer_feature_map = NULL;
+uint32_t *libFuzzer_feature_map = NULL;
 static const uint32_t kFeatureSetSize = 1 << 21;
 static const uint32_t kFeatureSetSizeMask = kFeatureSetSize - 1;
 
@@ -170,32 +170,33 @@ void SMF_default_tracer(uintptr_t method_ptr, uintptr_t bcp, uintptr_t offset_in
     // tty->print_cr("SMF_default_tracer: offset_in_SMF_table = %d", offset_in_SMF_table);
     if (offset_in_SMF_table != -1) {
       SMF_table[method->offset_in_SMF_table + offset_in_SMF_table + offset_in_bytecode]++;
-      SMF_method_cov_hit_table[method->offset_in_SMF_method_cov_hit_table] = 1;
-      // if (bc == Bytecodes::_tableswitch || bc == Bytecodes::_lookupswitch) {
-      //   tty->print_cr("[SMF]\t SMF_default_tracer: %s.%s.%s switch, offset = %ld, bci = %d",
-      //     method->klass_name()->as_C_string(), method->name()->as_C_string(),
-      //     method->signature()->as_C_string(),
-      //     offset_in_bytecode, method->bci_from(bcp_addr));
-      // }
-    } else {
-      // if (bc != Bytecodes::_goto && bc != Bytecodes::_goto_w &&
-      //     bc != Bytecodes::_jsr && bc != Bytecodes::_jsr_w) {
-      //   tty->print_cr("[SMF]\t SMF_default_tracer: %s.%s.%s has branch not found, bci = %d, code = %d,"
-      //                 " offset_in_SMF_table = %d, offset_in_method_hit_table = %d, method_size = %d"   
-      //      ,
-      //      method->klass_name()->as_C_string(), method->name()->as_C_string(),
-      //      method->signature()->as_C_string(),
-      //      method->bci_from(bcp_addr), bc,
-      //      method->offset_in_SMF_table,
-      //      method->offset_in_SMF_method_cov_hit_table,
-      //      method->SMF_method_cov_table_size
-      //      );
-      //   int *SMF_table_branch_bcis = GetSunnyMilkFuzzerBranchBCIs() + method->offset_in_SMF_table;
-      //   for (int i = 0; i < method->SMF_method_cov_table_size; i++) {
-      //     tty->print("%d ", SMF_table_branch_bcis[i]);
-      //   }
-      //   tty->print_cr("");
-      // }
+    //   SMF_method_cov_hit_table[method->offset_in_SMF_method_cov_hit_table] = 1;
+    
+    //   if (bc == Bytecodes::_tableswitch || bc == Bytecodes::_lookupswitch) {
+    //     tty->print_cr("[SMF]\t SMF_default_tracer: %s.%s.%s switch, offset = %ld, bci = %d",
+    //       method->klass_name()->as_C_string(), method->name()->as_C_string(),
+    //       method->signature()->as_C_string(),
+    //       offset_in_bytecode, method->bci_from(bcp_addr));
+    //   }
+    // } else {
+    //   if (bc != Bytecodes::_goto && bc != Bytecodes::_goto_w &&
+    //       bc != Bytecodes::_jsr && bc != Bytecodes::_jsr_w) {
+    //     tty->print_cr("[SMF]\t SMF_default_tracer: %s.%s.%s has branch not found, bci = %d, code = %d,"
+    //                   " offset_in_SMF_table = %d, offset_in_method_hit_table = %d, method_size = %d"   
+    //        ,
+    //        method->klass_name()->as_C_string(), method->name()->as_C_string(),
+    //        method->signature()->as_C_string(),
+    //        method->bci_from(bcp_addr), bc,
+    //        method->offset_in_SMF_table,
+    //        method->offset_in_SMF_method_cov_hit_table,
+    //        method->SMF_method_cov_table_size
+    //        );
+    //     int *SMF_table_branch_bcis = GetSunnyMilkFuzzerBranchBCIs() + method->offset_in_SMF_table;
+    //     for (int i = 0; i < method->SMF_method_cov_table_size; i++) {
+    //       tty->print("%d ", SMF_table_branch_bcis[i]);
+    //     }
+    //     tty->print_cr("");
+    //   }
     }
   }
 }
@@ -211,14 +212,14 @@ void SetSMFTableEnlarge(void (*enlarge)(int)) {
   SMFTableEnlarge = enlarge;
 }
 
-uint16_t GetLibFuzzerFeatureAt(int index, int offset) {
+uint32_t GetLibFuzzerFeatureAt(int index, int offset) {
   if (libFuzzer_feature_map == NULL) {
     return 0;
   }
   return libFuzzer_feature_map[((index << 3) + offset) & kFeatureSetSizeMask];
 }
 
-void SetLibFuzzerFeatureMap(uint16_t *the_map) {
+void SetLibFuzzerFeatureMap(uint32_t *the_map) {
   libFuzzer_feature_map = the_map;
 }
 
