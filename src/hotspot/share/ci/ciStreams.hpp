@@ -110,6 +110,7 @@ public:
   }
 
   address cur_bcp() const       { return _bc_start; }  // Returns bcp to current instruction
+  address next_bcp() const      { return _pc; }        // Returns bcp to next instruction 
   int next_bci() const          { return _pc - _start; }
   int cur_bci() const           { return _bc_start - _start; }
   int instruction_size() const  { return _pc - _bc_start; }
@@ -117,6 +118,7 @@ public:
   Bytecodes::Code cur_bc() const{ return check_java(_bc); }
   Bytecodes::Code cur_bc_raw() const { return check_defined(_raw_bc); }
   Bytecodes::Code next_bc()     { return Bytecodes::java_code((Bytecodes::Code)* _pc); }
+  bool has_next() const         { return _pc < _end; }
 
   // Return current ByteCode and increment PC to next bytecode, skipping all
   // intermediate constants.  Returns EOBC at end.
@@ -248,6 +250,7 @@ public:
   int           get_method_holder_index();
   int           get_method_signature_index(const constantPoolHandle& cpool);
 
+  ciMethod*     get_next_method();
 };
 
 

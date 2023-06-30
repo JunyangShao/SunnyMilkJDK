@@ -1467,6 +1467,8 @@ void LIR_Assembler::emit_smf_probe_helper(address smf_8bit_counter_idx) {
 void LIR_Assembler::emit_opSMFMethodStart(LIR_OpSMFMethodStart* op) {
   if (op->smf_method() != NULL) {
     // emit_smf_probe_helper(0, op->smf_method());
+    static int smf_method_counter = 0;
+    // tty->print_cr("[SMF]\t SMF probe actually generated count = %d", smf_method_counter++);
     emit_smf_probe_helper(op->smf_method());
   }
 }

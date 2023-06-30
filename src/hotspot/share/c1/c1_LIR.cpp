@@ -911,7 +911,7 @@ void LIR_OpVisitState::visit(LIR_Op* op) {
 }
 
 void LIR_Op::visit(LIR_OpVisitState* state) {
-  ShouldNotReachHere();
+  // ShouldNotReachHere();
 }
 
 void LIR_OpVisitState::do_stub(CodeStub* stub) {

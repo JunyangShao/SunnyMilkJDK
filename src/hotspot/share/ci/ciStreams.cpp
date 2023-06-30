@@ -321,6 +321,14 @@ int ciBytecodeStream::get_method_index() {
   return get_index_u2_cpcache();
 }
 
+ciMethod* ciBytecodeStream::get_next_method() {
+  VM_ENTRY_MARK;
+  ciEnv* env = CURRENT_ENV;
+  constantPoolHandle cpool(THREAD, _method->get_Method()->constants());
+  ciMethod* m = env->get_method_by_index(cpool, Bytes::get_native_u2(next_bcp() + 1), next_bc(), _holder);
+  return m;
+}
+
 // ------------------------------------------------------------------
 // ciBytecodeStream::get_method
 //

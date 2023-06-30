@@ -1560,12 +1560,12 @@ Switch* GraphBuilder::switch_node_smf(Switch* cur_switch_node, int smf_bci) {
     probe_start_idx += method()->get_Method()->offset_in_SMF_table;
     probe_default_idx += method()->get_Method()->offset_in_SMF_table;
     int probe_default_exhausted = 1;
-    bool probe_case_exhausted = true;
     for (int i = 0; i < 8; ++i) {
       if (GetLibFuzzerFeatureAt(probe_default_idx, i) == 0) {
         --probe_default_exhausted;
       }
     }
+    bool probe_case_exhausted = true;
     for (int i = 0; i < cur_switch_node->length(); ++i) {
       int probe_idx = probe_start_idx + i;
       for (int j = 0; j < 8; ++j) {
@@ -2010,7 +2010,7 @@ Values* GraphBuilder::collect_args_for_profiling(Values* args, ciMethod* target,
 }
 
 
-void GraphBuilder::invoke(Bytecodes::Code code) {
+void GraphBuilder::invoke(Bytecodes::Code code, address smf_probe_addr) {
   bool will_link;
   ciSignature* declared_signature = NULL;
   ciMethod*             target = stream()->get_method(will_link, &declared_signature);
@@ -2198,7 +2198,8 @@ void GraphBuilder::invoke(Bytecodes::Code code) {
   // check if we could do inlining
   if (!PatchALot && Inline && target->is_loaded() &&
       (klass->is_initialized() || (klass->is_interface() && target->holder()->is_initialized()))
-      && !patch_for_appendix) {
+      && !patch_for_appendix
+      && smf_probe_addr == NULL) {
     // callee is known => check if we have static binding
     if (code == Bytecodes::_invokestatic  ||
         code == Bytecodes::_invokespecial ||
@@ -2290,6 +2291,7 @@ void GraphBuilder::invoke(Bytecodes::Code code) {
   }
 
   Invoke* result = new Invoke(code, result_type, recv, args, vtable_index, target, state_before);
+  result->set_smf_probe_addr(smf_probe_addr);
   // push result
   append_split(result);
 
@@ -2831,6 +2833,10 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
 
   bool ignore_return = scope_data()->ignore_return();
 
+  // SMF hook for Jazzer.
+  bool is_jazzer_probe_invoke = false;
+  int idx_to_jazzer_cov_map = -1;
+
   while (!bailed_out() && last()->as_BlockEnd() == NULL &&
          (code = stream()->next()) != ciBytecodeStream::EOBC() &&
          (block_at(s.cur_bci()) == NULL || block_at(s.cur_bci()) == block())) {
@@ -2895,7 +2901,39 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
       case Bytecodes::_dconst_0       : dpush(append(new Constant(new DoubleConstant( 0)))); break;
       case Bytecodes::_dconst_1       : dpush(append(new Constant(new DoubleConstant( 1)))); break;
       case Bytecodes::_bipush         : ipush(append(new Constant(new IntConstant(((signed char*)s.cur_bcp())[1])))); break;
-      case Bytecodes::_sipush         : ipush(append(new Constant(new IntConstant((short)Bytes::get_Java_u2(s.cur_bcp()+1))))); break;
+      case Bytecodes::_sipush         : {
+        if (stream()->has_next()) {
+          Bytecodes::Code next_code = s.next_bc();
+          if (next_code == Bytecodes::_invokestatic) {
+            ciMethod* method = s.get_next_method();
+            if (method != NULL) {
+              ciInstanceKlass* holder = method->holder();
+              if (holder != NULL) {
+                ciSymbol* holder_name_symbol = holder->name();
+                ciSymbol* method_name_symbol = method->name();
+
+                if (holder_name_symbol != NULL &&
+                    method_name_symbol != NULL) {
+                  const char* holder_name = holder_name_symbol->as_utf8();
+                  const char* method_name = method_name_symbol->as_utf8();
+                  if (memcmp(holder_name, "com/code_intelligence/jazzer/runtime/CoverageMap", 48) == 0 &&
+                      memcmp(method_name, "recordCoverage", 14) == 0) {
+                    // If the invoked method is "com.code_intelligence.jazzer.runtime.CoverageMap.recordCoverage"
+                    // and its signature is "(I)V". Then we won't append this constant to the graph.
+                    is_jazzer_probe_invoke = true;
+                    idx_to_jazzer_cov_map = (short)Bytes::get_Java_u2(s.cur_bcp()+1);
+                    static int jazzer_probe_found_cnt = 0;
+                    // tty->print_cr("[SMF]\t Jazzer probe count = %d, idx = %d", jazzer_probe_found_cnt++, idx_to_jazzer_cov_map);
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+        ipush(append(new Constant(new IntConstant((short)Bytes::get_Java_u2(s.cur_bcp()+1)))));
+        break;
+      }
       case Bytecodes::_ldc            : // fall through
       case Bytecodes::_ldc_w          : // fall through
       case Bytecodes::_ldc2_w         : load_constant(); break;
@@ -3064,7 +3102,19 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
       case Bytecodes::_invokespecial  : // fall through
       case Bytecodes::_invokestatic   : // fall through
       case Bytecodes::_invokedynamic  : // fall through
-      case Bytecodes::_invokeinterface: invoke(code); break;
+      case Bytecodes::_invokeinterface: {
+        if (is_jazzer_probe_invoke) {
+          // ignore jazzer probe.
+          is_jazzer_probe_invoke = false;
+          break;
+        } else if (idx_to_jazzer_cov_map != -1 && Jazzer_table != NULL) {
+          // It's guaranteed that following the actual Jazzer probe, we have SMFDummy.
+          // SMFDummy is used to implement the actual Jazzer probe in C1.
+          invoke(code, Jazzer_table + idx_to_jazzer_cov_map);
+          idx_to_jazzer_cov_map = -1;
+        }
+        invoke(code, NULL); break;
+      }
       case Bytecodes::_new            : new_instance(s.get_index_u2()); break;
       case Bytecodes::_newarray       : new_type_array(); break;
       case Bytecodes::_anewarray      : new_object_array(); break;

@@ -1269,6 +1269,7 @@ LEAF(Invoke, StateSplit)
   BasicTypeList*  _signature;
   int             _vtable_index;
   ciMethod*       _target;
+  address         _smf_probe_addr = NULL;
 
  public:
   // creation
@@ -1298,6 +1299,10 @@ LEAF(Invoke, StateSplit)
   bool is_method_handle_intrinsic() const        { return target()->is_method_handle_intrinsic(); }
 
   virtual bool needs_exception_state() const     { return false; }
+
+  // SMF(Jazzer) related
+  address smf_probe_addr() const                 { return _smf_probe_addr; }
+  void set_smf_probe_addr(address addr)          { _smf_probe_addr = addr; }
 
   // generic
   virtual bool can_trap() const                  { return true; }

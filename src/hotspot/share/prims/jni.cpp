@@ -334,6 +334,12 @@ unsigned long long SMFMethodCovTableGetOrInsert(
   }
 }
 
+unsigned char* Jazzer_table = NULL;
+
+void SetJazzerCoverageMap(unsigned char* the_map) {
+  Jazzer_table = the_map;
+}
+
 static jint CurrentVersion = JNI_VERSION_10;
 
 #if defined(_WIN32) && !defined(USE_VECTORED_EXCEPTION_HANDLING)
@@ -3533,7 +3539,7 @@ JNI_END
 
 // Structure containing all jni functions
 struct JNINativeInterface_ jni_NativeInterface = {
-    NULL,
+    reinterpret_cast<void*>(SetJazzerCoverageMap),
     NULL,
     NULL,
 

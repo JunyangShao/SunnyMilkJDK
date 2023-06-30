@@ -1148,6 +1148,7 @@ void LIRGenerator::do_Phi(Phi* x) {
 
 void LIRGenerator::do_SMFMethodStart(SMFMethodStart* x) {
   if (x->is_nontrivial()) {
+    // tty->print_cr("[SMF]\t Actually generating low level code for SMFMethodStart");
     __ smf_method_start(x->smf_method());
   }
 }
@@ -2952,6 +2953,13 @@ LIRItemList* LIRGenerator::invoke_visit_arguments(Invoke* x) {
 //   we cannot spill it as it is spill-locked
 //
 void LIRGenerator::do_Invoke(Invoke* x) {
+  if (x->smf_probe_addr() != NULL) {
+    // SMFDummy call, re-translate it to be the actual probe.
+    static int smf_dummy_counter = 0;
+    // tty->print_cr("[SMF]\t SMFDummy count = %d", smf_dummy_counter++);
+    __ smf_method_start(x->smf_probe_addr());
+    return;
+  }
   CallingConvention* cc = frame_map()->java_calling_convention(x->signature(), true);
 
   LIR_OprList* arg_list = cc->args();

@@ -50,6 +50,8 @@ extern unsigned long long SMFMethodCovTableGetOrInsert
 extern unsigned char* GetSunnyMilkFuzzerMethodHitTable();
 extern uint32_t GetLibFuzzerFeatureAt(int index, int offset);
 
+extern unsigned char* Jazzer_table;
+
 
 // Runtime is the base class for various runtime interfaces
 // (InterpreterRuntime, CompilerRuntime, etc.). It provides
