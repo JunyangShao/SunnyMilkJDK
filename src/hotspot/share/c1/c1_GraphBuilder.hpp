@@ -278,7 +278,7 @@ class GraphBuilder {
   void method_return(Value x, bool ignore_return = false);
   void call_register_finalizer();
   void access_field(Bytecodes::Code code);
-  void invoke(Bytecodes::Code code, address smf_probe_addr);
+  void invoke(Bytecodes::Code code, int smf_probe_idx);
   void new_instance(int klass_index);
   void new_type_array();
   void new_object_array();

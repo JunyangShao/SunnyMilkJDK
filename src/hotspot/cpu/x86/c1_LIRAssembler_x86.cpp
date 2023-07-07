@@ -1470,12 +1470,12 @@ void LIR_Assembler::emit_opSMFMethodStart(LIR_OpSMFMethodStart* op) {
     static int smf_method_counter = 0;
     // tty->print_cr("[SMF]\t SMF probe actually generated count = %d", smf_method_counter++);
     emit_smf_probe_helper(op->smf_method());
-    static constexpr uintptr_t RegionSizeMask = 255u;
-    address region_start = reinterpret_cast<address>(
-        reinterpret_cast<uintptr_t>(op->smf_method()) & (~RegionSizeMask)
-        );
-    // tty->print_cr("[SMF]\t SMF region start instrumented = %p", region_start);
-    emit_smf_probe_helper(region_start);
+    // static constexpr uintptr_t RegionSizeMask = 255u;
+    // address region_start = reinterpret_cast<address>(
+    //     reinterpret_cast<uintptr_t>(op->smf_method()) & (~RegionSizeMask)
+    //     );
+    // // tty->print_cr("[SMF]\t SMF region start instrumented = %p", region_start);
+    // emit_smf_probe_helper(region_start);
   }
 }
 

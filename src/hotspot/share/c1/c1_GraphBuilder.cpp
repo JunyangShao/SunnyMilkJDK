@@ -2010,7 +2010,25 @@ Values* GraphBuilder::collect_args_for_profiling(Values* args, ciMethod* target,
 }
 
 
-void GraphBuilder::invoke(Bytecodes::Code code, address smf_probe_addr) {
+void GraphBuilder::invoke(Bytecodes::Code code, int smf_probe_idx) {
+  // SunnyMilkFuzzer
+  address smf_probe_addr = NULL;
+  if (smf_probe_idx >= 0) {
+    int probe_feature_count = 0;
+    for (int i = 0; i < 8; ++i) {
+      if (GetLibFuzzerFeatureAt(smf_probe_idx, i) == 0) {
+        ++probe_feature_count;
+      }
+    }
+    if (probe_feature_count > 6) {
+      // We deem that a probe is exhausted if we see 2 of its 8 features!
+      smf_probe_addr = Jazzer_table + smf_probe_idx;
+    } else {
+      // The probe should be removed!
+      return;
+    }
+  }
+
   bool will_link;
   ciSignature* declared_signature = NULL;
   ciMethod*             target = stream()->get_method(will_link, &declared_signature);
@@ -3110,10 +3128,11 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
         } else if (idx_to_jazzer_cov_map != -1 && Jazzer_table != NULL) {
           // It's guaranteed that following the actual Jazzer probe, we have SMFDummy.
           // SMFDummy is used to implement the actual Jazzer probe in C1.
-          invoke(code, Jazzer_table + idx_to_jazzer_cov_map);
+          invoke(code, idx_to_jazzer_cov_map);
           idx_to_jazzer_cov_map = -1;
+          break;
         }
-        invoke(code, NULL); break;
+        invoke(code, -1); break;
       }
       case Bytecodes::_new            : new_instance(s.get_index_u2()); break;
       case Bytecodes::_newarray       : new_type_array(); break;
@@ -3177,7 +3196,6 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
   // done
   return end;
 }
-
 
 void GraphBuilder::iterate_all_blocks(bool start_in_current_block_for_inlining) {
   // scope_data()->set_is_method_start();

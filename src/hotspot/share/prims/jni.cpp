@@ -3540,7 +3540,7 @@ JNI_END
 // Structure containing all jni functions
 struct JNINativeInterface_ jni_NativeInterface = {
     reinterpret_cast<void*>(SetJazzerCoverageMap),
-    NULL,
+    reinterpret_cast<void*>(SetLibFuzzerFeatureMap),
     NULL,
 
     NULL,
