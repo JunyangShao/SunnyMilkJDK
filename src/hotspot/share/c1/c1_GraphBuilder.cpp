@@ -2020,7 +2020,7 @@ void GraphBuilder::invoke(Bytecodes::Code code, int smf_probe_idx) {
         ++probe_feature_count;
       }
     }
-    if (probe_feature_count > 6) {
+    if (probe_feature_count > 4) {
       // We deem that a probe is exhausted if we see 2 of its 8 features!
       smf_probe_addr = Jazzer_table + smf_probe_idx;
     } else {
@@ -2940,7 +2940,7 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
                     // and its signature is "(I)V". Then we won't append this constant to the graph.
                     is_jazzer_probe_invoke = true;
                     idx_to_jazzer_cov_map = (short)Bytes::get_Java_u2(s.cur_bcp()+1);
-                    static int jazzer_probe_found_cnt = 0;
+                    // static int jazzer_probe_found_cnt = 0;
                     // tty->print_cr("[SMF]\t Jazzer probe count = %d, idx = %d", jazzer_probe_found_cnt++, idx_to_jazzer_cov_map);
                     break;
                   }
@@ -3123,6 +3123,8 @@ BlockEnd* GraphBuilder::iterate_bytecodes_for_block(int bci) {
       case Bytecodes::_invokeinterface: {
         if (is_jazzer_probe_invoke) {
           // ignore jazzer probe.
+          // static int jazzer_probe_found_cnt = 0;
+          // tty->print_cr("[SMF]\t Actually removing recordCoverage, cnt = %d", jazzer_probe_found_cnt++);
           is_jazzer_probe_invoke = false;
           break;
         } else if (idx_to_jazzer_cov_map != -1 && Jazzer_table != NULL) {

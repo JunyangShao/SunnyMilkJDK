@@ -2964,6 +2964,14 @@ void LIRGenerator::do_Invoke(Invoke* x) {
 
   LIR_OprList* arg_list = cc->args();
   LIRItemList* args = invoke_visit_arguments(x);
+
+  if (memcmp(x->target()->name()->as_utf8(), "recordCoverage", 14) == 0) {
+    // In place translate this call to smf_method_start
+    address smf_probe_addr = Jazzer_table + args->at(0)->value()->as_Constant()->type()->as_IntConstant()->value();
+    __ smf_method_start(smf_probe_addr);
+    return;
+  }
+
   LIR_Opr receiver = LIR_OprFact::illegalOpr;
 
   // setup result register
