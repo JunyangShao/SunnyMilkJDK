@@ -2972,6 +2972,10 @@ void LIRGenerator::do_Invoke(Invoke* x) {
     return;
   }
 
+  if (memcmp(x->target()->name()->as_utf8(), "SMFDummy", 8) == 0) {
+    return;
+  }
+
   LIR_Opr receiver = LIR_OprFact::illegalOpr;
 
   // setup result register

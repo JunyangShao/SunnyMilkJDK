@@ -2020,7 +2020,7 @@ void GraphBuilder::invoke(Bytecodes::Code code, int smf_probe_idx) {
         ++probe_feature_count;
       }
     }
-    if (probe_feature_count > 4) {
+    if (probe_feature_count > 6) {
       // We deem that a probe is exhausted if we see 2 of its 8 features!
       smf_probe_addr = Jazzer_table + smf_probe_idx;
     } else {

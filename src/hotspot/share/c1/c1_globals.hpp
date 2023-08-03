@@ -165,7 +165,7 @@
   develop(bool, PrintCanonicalization, false,                               \
           "Print graph node canonicalization")                              \
                                                                             \
-  develop(bool, UseTableRanges, false,                                       \
+  develop(bool, UseTableRanges, true,                                       \
           "Faster versions of lookup table using ranges")                   \
                                                                             \
   product(intx, C1MaxInlineSize, 35,                                        \
